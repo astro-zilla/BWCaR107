@@ -4,17 +4,21 @@
 
 #include "z_secrets.h"
 
-char ssid[] = SECRET_SSID;              // your network SSID (name)
-char pass[] = SECRET_PASS;              // your network password (use for WPA, or use as key for WEP)
+char ssid[] = SECRET_SSID;  // your WPA2 enterprise network SSID (name)
+char user[] = SECRET_USER;  // your WPA2 enterprise username
+char pass[] = SECRET_PASS;  // your WPA2 enterprise password
+char identity[] = SECRET_IDENTITY;
+
 int keyIndex = 0;                       // your network key index number (needed only for WEP)
 
 // dell-g5 over Orang
-IPAddress server(172,20,10,11);
+IPAddress server(10,9,42,235);
 int port = 53282;
 
 // wifi setup
 int status = WL_IDLE_STATUS;
 WiFiClient client;
+byte mac[6]; //84:CC:A8:2B:E1:74 -- m4qjzq6z7adbuqfg
 
 // time for ping calcs
 long time = 0;
@@ -78,19 +82,18 @@ void setup() {
         Serial.print("Attempting to connect to SSID: ");
         Serial.println(ssid);
         // Connect to WPA/WPA2 network. Change this line if using open or WEP network:
-        status = WiFi.begin(ssid, pass);
+        // status = WiFi.begin(ssid, pass);
+        status = WiFi.beginEnterprise(ssid, user, pass, identity);
     }
     Serial.println("Connected to WiFi");
     printWifiStatus(); // ###REMOVE BEFORE FIRE###
 
-    int err = WiFi.hostByName('dell-g5',server);
+    //int err = WiFi.hostByName('dell-g5',server);
 
     if (client.connect(server,port)) {
         Serial.print("connected to: ");
         Serial.println(server);
     }
-
-
 }
 
 void loop() {
@@ -163,9 +166,4 @@ void reconnect() {
         Serial.print("connected to: ");
         Serial.println(server);
     }
-}
-
-void pinger() {
-    int res = WiFi.ping(server);
-    Serial.println(res);
 }

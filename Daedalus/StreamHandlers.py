@@ -1,19 +1,21 @@
+import math
 import threading
 import time
 
 import cv2
 import numpy
+import numpy as np
 
 
 class VideoStreamHandler(threading.Thread):
     def __init__(self, source):
         super().__init__()
         self.cap = None
-        self.width = 0
-        self.height = 0
+        self.width = 1016
+        self.height = 760
         self.terminated = False
-        self.frame = None
-        self.times = list(numpy.linspace(0, 1, 30))  # init list of frame arrival times to calculate fps
+        self.frame = np.zeros((760, 1016, 3))
+        self.times = [0]*10  # init list of frame arrival times to calculate fps
         self.source = source
         self.connect(self.source)
 
@@ -21,7 +23,6 @@ class VideoStreamHandler(threading.Thread):
         self.cap = cv2.VideoCapture(source)
         self.width = self.cap.get(cv2.CAP_PROP_FRAME_WIDTH)
         self.height = self.cap.get(cv2.CAP_PROP_FRAME_HEIGHT)
-        ret, self.frame = self.cap.read()  # read first frame to init variable
         print('# camera datastream initiated')
 
     def run(self):
@@ -29,21 +30,22 @@ class VideoStreamHandler(threading.Thread):
             ret, frame = self.cap.read()  # read frame from stream (blocking)
             if frame is not None:
                 self.frame = frame
+                self.times.append(time.time())
+                self.times = self.times[-10:]  # keep 10-buffer of frame times to calc avg
             else:
                 self.cap.release()
                 print('# camera connection lost... retrying')
                 self.connect(self.source)
-            self.times.append(time.time())
-            self.times = self.times[-30:]  # keep 30-buffer of frame times to calc avg
+
         self.cap.release()
         print('# camera connection successfully terminated')
 
-    def get_frame(self):
-        return self.frame
-
     def get_fps(self) -> float:
-        # calculate fps
-        return 1 / numpy.mean(numpy.diff(self.times))
+
+        if self.times[-1] < (time.time() - 10):
+            return 0  # fps < 0.1 = 0
+        else:
+            return 1 / np.mean(np.diff(self.times))  # return calc fps
 
     def terminate(self):
         self.terminated = True

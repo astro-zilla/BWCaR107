@@ -4,6 +4,10 @@ import socket
 import time
 
 from StreamHandlers import ArduinoStreamHandler, VideoStreamHandler
+from Image import undistort
+
+
+def nothing(_): pass
 
 
 def main():
@@ -38,6 +42,7 @@ def main():
     cv2.createTrackbar('motor 1', 'frame', 0, 255, nothing)
     cv2.createTrackbar('motor 2', 'frame', 0, 255, nothing)
 
+
     while True:
         # input run-time to data array
         time_since_start = int(time.time_ns() / 1000000) - start_time
@@ -48,10 +53,10 @@ def main():
         # get/send arduino data from
         arduino_stream.set_data(json.dumps(data))
         arduinodata = arduino_stream.get_data()
-        recv = json.loads(arduinodata)  # data to use later
 
         # get video data from stream
-        frame = video_stream.get_frame()
+        frame = video_stream.frame
+        frame = undistort(frame,balance=0.5)
         overlay = frame.copy()
         output = frame.copy()
 
@@ -63,7 +68,6 @@ def main():
 
         # output to frame
         cv2.imshow('frame', output)
-
 
         # press q key to exit
         if cv2.waitKey(1) & 0xFF == ord('q'):
