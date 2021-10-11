@@ -1,26 +1,38 @@
-import cv2
-import numpy
 import threading
 import time
+
+import cv2
+import numpy
 
 
 class VideoStreamHandler(threading.Thread):
     def __init__(self, source):
+        super().__init__()
+        self.cap = None
+        self.width = 0
+        self.height = 0
+        self.terminated = False
+        self.frame = None
+        self.times = list(numpy.linspace(0, 1, 30))  # init list of frame arrival times to calculate fps
+        self.source = source
+        self.connect(self.source)
+
+    def connect(self, source):
         self.cap = cv2.VideoCapture(source)
         self.width = self.cap.get(cv2.CAP_PROP_FRAME_WIDTH)
         self.height = self.cap.get(cv2.CAP_PROP_FRAME_HEIGHT)
-        self.terminated = False
-
-        threading.Thread.__init__(self)
-
         ret, self.frame = self.cap.read()  # read first frame to init variable
-        self.times = list(numpy.linspace(0, 1, 30))  # init list of frame arrival times to calculate fps
-
         print('# camera datastream initiated')
 
     def run(self):
         while not self.terminated:
-            ret, self.frame = self.cap.read()  # read frame from stream (blocking)
+            ret, frame = self.cap.read()  # read frame from stream (blocking)
+            if frame is not None:
+                self.frame = frame
+            else:
+                self.cap.release()
+                print('# camera connection lost... retrying')
+                self.connect(self.source)
             self.times.append(time.time())
             self.times = self.times[-30:]  # keep 30-buffer of frame times to calc avg
         self.cap.release()
@@ -43,7 +55,7 @@ class ArduinoStreamHandler(threading.Thread):
         self.file = client.makefile()  # file access for reads ensures full reads
         self.terminated = False
 
-        threading.Thread.__init__(self)
+        super().__init__()
 
         self.out_data = '{"time": 0}'
         self.client.send(bytes(self.out_data, 'utf-8'))

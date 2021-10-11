@@ -1,6 +1,13 @@
-import json, socket, time, cv2
+import cv2
+import json
+import socket
+import time
 
 from StreamHandlers import ArduinoStreamHandler, VideoStreamHandler
+
+
+def nothing(_):
+    pass
 
 
 def main():
@@ -10,6 +17,7 @@ def main():
 
     # listen on streaming socket
     server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    server.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
     server.bind((host, port))
     server.listen()
 
@@ -28,24 +36,23 @@ def main():
     arduino_stream.start()
     print(f'# arduino stream started')
 
-    data = {
-        "time": 0,
-        "motors": [0, 0, 0, 0],
-        "servos": [0, 0],
-        "LEDs": [0, 0, 0, 0]
-    }
-
     start_time = int(time.time_ns() / 1000000)
+
+    cv2.namedWindow('frame')
+    cv2.createTrackbar('motor 1', 'frame', 0, 255, nothing)
+    cv2.createTrackbar('motor 2', 'frame', 0, 255, nothing)
 
     while True:
         # input run-time to data array
         time_since_start = int(time.time_ns() / 1000000) - start_time
         data["time"] = time_since_start
+        data["motors"][0] = cv2.getTrackbarPos('motor 1', 'frame')
+        data["motors"][1] = cv2.getTrackbarPos('motor 2', 'frame')
 
         # get/send arduino data from
         arduino_stream.set_data(json.dumps(data))
         arduinodata = arduino_stream.get_data()
-        recv = json.loads(arduinodata)              # data to use later
+        recv = json.loads(arduinodata)  # data to use later
 
         # get video data from stream
         frame = video_stream.get_frame()
@@ -61,6 +68,7 @@ def main():
         # output to frame
         cv2.imshow('frame', output)
 
+
         # press q key to exit
         if cv2.waitKey(1) & 0xFF == ord('q'):
             break
@@ -72,4 +80,10 @@ def main():
 
 
 if __name__ == "__main__":
+    data = {
+        "time": 0,
+        "motors": [100, 100, 0, 0],
+        "servos": [0, 0],
+        "LEDs": [0, 0, 0, 0]
+    }
     main()
