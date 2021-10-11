@@ -6,10 +6,6 @@ import time
 from StreamHandlers import ArduinoStreamHandler, VideoStreamHandler
 
 
-def nothing(_):
-    pass
-
-
 def main():
     # broadcast locally on 53282
     host = socket.gethostname()

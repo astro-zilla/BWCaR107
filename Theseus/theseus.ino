@@ -39,8 +39,6 @@ void setup() {
     pinMode(interruptPin, INPUT_PULLUP);
     attachInterrupt(digitalPinToInterrupt(interruptPin), reconnect, FALLING);
 
-    ITimer1.init();
-
     Serial.begin(9600);     //Initialize serial and wait for port to open: ###REMOVE BEFORE FIRE###
     while (!Serial) {}      // wait for serial port to connect. Needed for native USB port only
     Serial.println("initialising...");
