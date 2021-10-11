@@ -5,7 +5,7 @@ import time
 
 from StreamHandlers import ArduinoStreamHandler, VideoStreamHandler
 
-
+# does nothing
 def nothing(_):
     pass
 
