@@ -4,6 +4,10 @@ import socket
 import time
 
 from StreamHandlers import ArduinoStreamHandler, VideoStreamHandler
+from Image import undistort
+
+
+def nothing(_): pass
 
 
 def main():
@@ -16,15 +20,11 @@ def main():
     server.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
     server.bind((host, port))
     server.listen()
-
-    # accept connection from arduino
     print(f'# listening for connection from Arduino on {host}:{port}')
-    client, addr = server.accept()
-    print(f'# recieved connection from arduino: {addr[0]}:{addr[1]}')
 
     # init asynchronous "threading" stream handlers
     video_stream = VideoStreamHandler("http://localhost:8081/stream/video.mjpeg")
-    arduino_stream = ArduinoStreamHandler(client)
+    arduino_stream = ArduinoStreamHandler(server,data)
 
     # start streams
     video_stream.start()
@@ -48,10 +48,10 @@ def main():
         # get/send arduino data from
         arduino_stream.set_data(json.dumps(data))
         arduinodata = arduino_stream.get_data()
-        recv = json.loads(arduinodata)  # data to use later
 
         # get video data from stream
-        frame = video_stream.get_frame()
+        frame = video_stream.frame
+        frame = undistort(frame, balance=0.5)
         overlay = frame.copy()
         output = frame.copy()
 
@@ -63,7 +63,6 @@ def main():
 
         # output to frame
         cv2.imshow('frame', output)
-
 
         # press q key to exit
         if cv2.waitKey(1) & 0xFF == ord('q'):
