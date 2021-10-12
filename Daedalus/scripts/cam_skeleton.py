@@ -10,7 +10,6 @@ def main():
     while True:
         frame = video_stream.frame
         cv2.imshow('frame', frame)
-
         k = cv2.waitKey(20)
         if k == ord('q'):
             break

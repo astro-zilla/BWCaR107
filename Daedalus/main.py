@@ -17,7 +17,6 @@ def main():
     server.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
     server.bind((host, port))
     server.listen()
-    print(f'# listening for connection from Arduino on {host}:{port}')
 
     # init asynchronous "threading" stream handlers
     video_stream = VideoStreamHandler("http://localhost:8081/stream/video.mjpeg")
@@ -25,22 +24,20 @@ def main():
 
     # start streams
     video_stream.start()
-    print(f'# video stream started')
     arduino_stream.start()
-    print(f'# arduino stream started')
 
     start_time = int(time.time_ns() / 1000000)
 
-    cv2.namedWindow('frame')
-    cv2.createTrackbar('motor 1', 'frame', 0, 255, nothing)
-    cv2.createTrackbar('motor 2', 'frame', 0, 255, nothing)
+    cv2.namedWindow('sliders')
+    cv2.createTrackbar('motor 1', 'sliders', 0, 255, nothing)
+    cv2.createTrackbar('motor 2', 'sliders', 0, 255, nothing)
 
     while True:
         # input run-time to data array
         time_since_start = int(time.time_ns() / 1000000) - start_time
-        data["time"] = time_since_start
-        data["motors"][0] = cv2.getTrackbarPos('motor 1', 'frame')
-        data["motors"][1] = cv2.getTrackbarPos('motor 2', 'frame')
+
+        data["motors"][0] = cv2.getTrackbarPos('motor 1', 'sliders')
+        data["motors"][1] = cv2.getTrackbarPos('motor 2', 'sliders')
 
         # get/send arduino data from
         arduino_stream.set_data(json.dumps(data))
@@ -48,7 +45,6 @@ def main():
 
         # get video data from stream
         frame = video_stream.frame
-        cv2.imshow('raw', frame)
         frame = undistort(frame, balance=0.5)
 
         frame = square(frame)
@@ -57,7 +53,7 @@ def main():
 
         # draw info bar and fps
         cv2.rectangle(overlay, (0, 0), (150, 60), (50, 50, 50), -1)
-        cv2.putText(img=overlay, text=f'FPS: {video_stream.get_fps():.1f}', org=(20, 30), fontFace=cv2.FONT_HERSHEY_TRIPLEX,
+        cv2.putText(img=overlay, text=f'FPS: {video_stream.get_rate():.1f}', org=(20, 30), fontFace=cv2.FONT_HERSHEY_TRIPLEX,
                     fontScale=0.5, color=(255, 255, 255), thickness=1)
         cv2.addWeighted(overlay, 0.8, frame, 0.2, 0, output)
 

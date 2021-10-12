@@ -1,6 +1,6 @@
 import time
-from threading import Thread
 from socket import error as socketError
+from threading import Thread
 
 import cv2
 import numpy as np
@@ -11,21 +11,21 @@ class ArduinoStreamHandler(Thread):
         super().__init__()
 
         self.server = server
-        self.server.settimeout(1)
         self.client = None
         self.file = None
         self.terminated = False
+        self.times = [0] * 10  # init list of data arrival times to calculate fps
         self.out_data = data
         self.in_data = ''
 
     def connect(self):
         try:
+            print(f'# listening for connection from Arduino')
             self.client, addr = self.server.accept()
             print(f'# recieved connection from arduino: {addr[0]}:{addr[1]}')
             self.file = self.client.makefile()  # file access for reads ensures full reads
             self.client.send(bytes(self.out_data, 'utf8'))
             self.in_data = self.file.readline()  # readline to ensure full read of JSON
-            print('# arduino datastream initiated')
             return True
         except socketError:
             return False
@@ -33,11 +33,14 @@ class ArduinoStreamHandler(Thread):
     def run(self):
         while not self.terminated:
             if self.client is None:
-                self.connect()
+                if self.connect():
+                    print('# arduino datastream initiated')
                 continue
             try:
                 self.client.send(bytes(self.out_data, 'utf8'))
                 self.in_data = self.file.readline()
+                self.times.append(time.time())
+                self.times = self.times[-10:]  # keep 10-buffer of frame times to calc avg
             except ConnectionAbortedError:
                 print(f'connection to arduino lost, reconnecting...')
                 self.connect()
@@ -49,6 +52,12 @@ class ArduinoStreamHandler(Thread):
         if self.client:
             self.client.close()
         print('# arduino connection successfully terminated')
+
+    def get_rate(self) -> float:
+        if self.times[-1] < (time.time() - 10):
+            return 0  # fps < 0.1 = 0
+        else:
+            return 1 / np.mean(np.diff(self.times))  # return calc fps
 
     def set_data(self, data):
         self.out_data = data
@@ -96,8 +105,7 @@ class VideoStreamHandler(Thread):
         self.cap.release()
         print('# camera connection successfully terminated')
 
-    def get_fps(self) -> float:
-
+    def get_rate(self) -> float:
         if self.times[-1] < (time.time() - 10):
             return 0  # fps < 0.1 = 0
         else:

@@ -12,7 +12,8 @@ char identity[] = SECRET_IDENTITY;
 int keyIndex = 0;                       // your network key index number (needed only for WEP)
 
 // dell-g5 over Orang
-IPAddress server(10,248,151,172);
+//IPAddress server(10,248,151,172);
+IPAddress server(10,9,42,235);
 int port = 53282;
 
 // wifi setup
