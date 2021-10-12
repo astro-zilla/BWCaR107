@@ -1,9 +1,8 @@
-import math
+import socket
 import threading
 import time
 
 import cv2
-import numpy
 import numpy as np
 
 
@@ -59,6 +58,7 @@ class ArduinoStreamHandler(threading.Thread):
         super().__init__()
 
         self.server = server
+        self.server.settimeout(1)
         self.client = None
         self.file = None
         self.terminated = False
@@ -66,17 +66,22 @@ class ArduinoStreamHandler(threading.Thread):
         self.in_data = ''
 
     def connect(self):
-        self.client, addr = self.server.accept()
-        print(f'# recieved connection from arduino: {addr[0]}:{addr[1]}')
-        self.file = self.client.makefile()  # file access for reads ensures full reads
-        self.client.send(bytes(self.out_data, 'utf8'))  # TODO CASE IN WHICH DATA IS AN EMPTY STRING
-        self.in_data = self.file.readline()  # readline to ensure full read of JSON
-        print('# arduino datastream initiated')
+        try:
+            self.client, addr = self.server.accept()
+            print(f'# recieved connection from arduino: {addr[0]}:{addr[1]}')
+            self.file = self.client.makefile()  # file access for reads ensures full reads
+            self.client.send(bytes(self.out_data, 'utf8'))
+            self.in_data = self.file.readline()  # readline to ensure full read of JSON
+            print('# arduino datastream initiated')
+            return True
+        except socket.timeout:
+            return False
 
     def run(self):
         while not self.terminated:
             if self.client is None:
                 self.connect()
+                continue
             try:
                 self.client.send(bytes(self.out_data, 'utf8'))
                 self.in_data = self.file.readline()
@@ -86,8 +91,10 @@ class ArduinoStreamHandler(threading.Thread):
                 print('# arduino datastream recovered')
 
         # exit gracefully
-        self.file.close()
-        self.client.close()
+        if self.file:
+            self.file.close()
+        if self.client:
+            self.client.close()
         print('# arduino connection successfully terminated')
 
     def set_data(self, data):

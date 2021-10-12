@@ -1,7 +1,7 @@
 import cv2
 import numpy as np
 
-source = 0
+source = 1
 if source == 0:
     DIM = (1016, 760)
     K = np.array([[644.0995890009748, 0.0, 514.3136068698651], [0.0, 645.7478380069424, 401.9020082118956], [0.0, 0.0, 1.0]])
@@ -37,10 +37,14 @@ def undistort(img, balance=0.0, dim2=None, dim3=None):
     return cv2.remap(img, map1, map2, interpolation=cv2.INTER_LINEAR, borderMode=cv2.BORDER_CONSTANT)
 
 
-def square(img):
+def square(img, from_pts_in=None):
     dim1 = img.shape[:2][::-1]
-    from_pts = np.float32([[227, 66], [863, 102], [159, 712]])
-    to_pts = np.float32([[0, 0], [dim1[1], 0], [0, dim1[1]]])
-    squaring_M = cv2.getAffineTransform(from_pts, to_pts)
+    if from_pts_in is not None:
+        from_pts = from_pts_in
+    else:
+        from_pts = np.float32([[131, 729], [215, 54], [873, 90], [850, 789]])
+    to_pts = np.float32([[0, dim1[1]], [0, 0], [dim1[1], 0], [dim1[1], dim1[1]]])
 
-    return cv2.warpAffine(img, squaring_M, (dim1[1],dim1[1]))
+    squaring_M = cv2.getPerspectiveTransform(from_pts, to_pts)
+
+    return cv2.warpPerspective(img, squaring_M, (dim1[1], dim1[1]))

@@ -24,7 +24,7 @@ def main():
 
     # init asynchronous "threading" stream handlers
     video_stream = VideoStreamHandler("http://localhost:8081/stream/video.mjpeg")
-    arduino_stream = ArduinoStreamHandler(server,json.dumps(data))
+    arduino_stream = ArduinoStreamHandler(server, json.dumps(data))
 
     # start streams
     video_stream.start()
@@ -51,7 +51,9 @@ def main():
 
         # get video data from stream
         frame = video_stream.frame
+        cv2.imshow('raw',frame)
         frame = undistort(frame, balance=0.5)
+
         frame = square(frame)
         overlay = frame.copy()
         output = frame.copy()
@@ -69,10 +71,15 @@ def main():
         if cv2.waitKey(1) & 0xFF == ord('q'):
             break
 
+        if video_stream.terminated or arduino_stream.terminated:
+            break
+
     # graceful exit
     cv2.destroyAllWindows()
     video_stream.terminate()
     arduino_stream.terminate()
+
+    print('# main thread exit')
 
 
 if __name__ == "__main__":
