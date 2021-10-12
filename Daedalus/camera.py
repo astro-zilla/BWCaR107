@@ -1,6 +1,5 @@
 import cv2
 from StreamHandlers import VideoStreamHandler
-import os
 import numpy as np
 
 
@@ -28,13 +27,9 @@ def main():
 
         # read the image
         img = cv2.imread(path)
-        img_copy = img.copy()
 
         # crop it to include just the bottom left corner (collection point)
         cropped_img = img[580:720, 160:300]
-        cropped_img_copy = cropped_img.copy()
-
-        canny_img = cv2.Canny(cropped_img,50,50)
 
         while True:
 
