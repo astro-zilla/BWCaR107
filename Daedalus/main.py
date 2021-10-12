@@ -4,7 +4,7 @@ import socket
 import time
 
 from StreamHandlers import ArduinoStreamHandler, VideoStreamHandler
-from Image import undistort
+from Image import undistort,square
 
 
 def nothing(_): pass
@@ -52,6 +52,7 @@ def main():
         # get video data from stream
         frame = video_stream.frame
         frame = undistort(frame, balance=0.5)
+        frame = square(frame)
         overlay = frame.copy()
         output = frame.copy()
 

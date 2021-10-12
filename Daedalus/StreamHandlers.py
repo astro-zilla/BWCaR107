@@ -28,6 +28,7 @@ class VideoStreamHandler(threading.Thread):
     def run(self):
         while not self.terminated:
             ret, frame = self.cap.read()  # read frame from stream (blocking)
+
             if self.cap is None:
                 self.connect(self.source)
             if frame is not None:
@@ -63,8 +64,6 @@ class ArduinoStreamHandler(threading.Thread):
         self.terminated = False
         self.out_data = data
         self.in_data = ''
-        self.connect()
-        print('# arduino datastream initiated')
 
     def connect(self):
         self.client, addr = self.server.accept()
@@ -72,9 +71,12 @@ class ArduinoStreamHandler(threading.Thread):
         self.file = self.client.makefile()  # file access for reads ensures full reads
         self.client.send(bytes(self.out_data, 'utf8'))  # TODO CASE IN WHICH DATA IS AN EMPTY STRING
         self.in_data = self.file.readline()  # readline to ensure full read of JSON
+        print('# arduino datastream initiated')
 
     def run(self):
         while not self.terminated:
+            if self.client is None:
+                self.connect()
             try:
                 self.client.send(bytes(self.out_data, 'utf8'))
                 self.in_data = self.file.readline()
