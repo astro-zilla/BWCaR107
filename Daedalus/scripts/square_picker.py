@@ -1,13 +1,18 @@
 import cv2
 import numpy as np
 
-from Daedalus.Image import square, undistort
-from Daedalus.StreamHandlers import VideoStreamHandler
+from Daedalus.utils.Image import square, undistort
+from Daedalus.utils.StreamHandlers import VideoStreamHandler
 
 points = np.int32([[140,722],[214,59],[871,95],[849,787]])
 
 
 def draw_circle(event, x, y, flags, param):
+    # move mouse and press:
+    #   left click for pt0
+    #   middle click for pt1
+    #   right click for pt2
+    #   mousewheel for pt3
     if event == cv2.EVENT_LBUTTONDOWN:
         points[0] = (x, y)
     elif event == cv2.EVENT_MBUTTONDOWN:
