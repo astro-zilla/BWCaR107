@@ -15,7 +15,7 @@ class VideoStreamHandler(threading.Thread):
         self.height = 760
         self.terminated = False
         self.frame = np.zeros((760, 1016, 3))
-        self.times = [0]*10  # init list of frame arrival times to calculate fps
+        self.times = [0] * 10  # init list of frame arrival times to calculate fps
         self.source = source
         self.connect(self.source)
 
@@ -52,23 +52,34 @@ class VideoStreamHandler(threading.Thread):
 
 
 class ArduinoStreamHandler(threading.Thread):
-    def __init__(self, client):
-        self.client = client
-        self.file = client.makefile()  # file access for reads ensures full reads
-        self.terminated = False
-
+    def __init__(self, server, data):
         super().__init__()
 
-        self.out_data = '{"time": 0}'
-        self.client.send(bytes(self.out_data, 'utf-8'))
-        self.in_data = self.file.readline()  # readline to ensure full read of JSON
-
+        self.server = server
+        self.client = None
+        self.file = None
+        self.terminated = False
+        self.out_data = data
+        self.in_data = ''
+        self.connect()
         print('# arduino datastream initiated')
+
+    def connect(self):
+        self.client, addr = self.server.accept()
+        print(f'# recieved connection from arduino: {addr[0]}:{addr[1]}')
+        self.file = self.client.makefile()  # file access for reads ensures full reads
+        self.client.send(bytes(self.out_data, 'utf8'))  # TODO CASE IN WHICH DATA IS AN EMPTY STRING
+        self.in_data = self.file.readline()  # readline to ensure full read of JSON
 
     def run(self):
         while not self.terminated:
-            self.client.send(bytes(self.out_data, 'utf8'))
-            self.in_data = self.file.readline()
+            try:
+                self.client.send(bytes(self.out_data, 'utf8'))
+                self.in_data = self.file.readline()
+            except ConnectionAbortedError:
+                print(f'connection to arduino lost, reconnecting...')
+                self.connect()
+                print('# arduino datastream recovered')
 
         # exit gracefully
         self.file.close()

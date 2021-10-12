@@ -20,15 +20,11 @@ def main():
     server.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
     server.bind((host, port))
     server.listen()
-
-    # accept connection from arduino
     print(f'# listening for connection from Arduino on {host}:{port}')
-    client, addr = server.accept()
-    print(f'# recieved connection from arduino: {addr[0]}:{addr[1]}')
 
     # init asynchronous "threading" stream handlers
     video_stream = VideoStreamHandler("http://localhost:8081/stream/video.mjpeg")
-    arduino_stream = ArduinoStreamHandler(client)
+    arduino_stream = ArduinoStreamHandler(server,data)
 
     # start streams
     video_stream.start()
@@ -41,7 +37,6 @@ def main():
     cv2.namedWindow('frame')
     cv2.createTrackbar('motor 1', 'frame', 0, 255, nothing)
     cv2.createTrackbar('motor 2', 'frame', 0, 255, nothing)
-
 
     while True:
         # input run-time to data array
@@ -56,7 +51,7 @@ def main():
 
         # get video data from stream
         frame = video_stream.frame
-        frame = undistort(frame,balance=0.5)
+        frame = undistort(frame, balance=0.5)
         overlay = frame.copy()
         output = frame.copy()
 
