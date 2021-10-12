@@ -107,9 +107,36 @@ def main():
         stacked_results2 = np.concatenate((mask_line, thin), axis=1)
         cv2.imshow("lines", stacked_results2)
 
+        # find centroid of big square for direction
+        im = np.zeros(mask_bsquare.shape, "uint8")
+        def get_main_contours(img, size):
+            contours, hierarchy = cv2.findContours(img, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
+            list_contour = []
+            for contour in contours:
+                area = cv2.contourArea(contour)
+                if area > size:
+                    list_contour.append(contour)
+            return list_contour
+
+        contours = np.array(get_main_contours(mask_bsquare, 300))
+        for contour in contours:
+            cv2.drawContours(im, contour, -1, (255, 255, 255), 3)
+
+        ret, thresh = cv2.threshold(im, 127, 255, 0)
+        # calculate moments of binary image
+        M = cv2.moments(thresh)
+
+        # calculate x,y coordinate of center
+        cX = int(M["m10"] / M["m00"])
+        cY = int(M["m01"] / M["m00"])
+        cv2.circle(im, (cX, cY), 5, (255, 255, 255), -1)
+        cv2.imshow("centroid", im)
+
+
         if cv2.waitKey(1) & 0xFF == ord('q'):
             break
-        video_stream.terminate()
+
+    video_stream.terminate()
 
 
 if __name__ == "__main__":
