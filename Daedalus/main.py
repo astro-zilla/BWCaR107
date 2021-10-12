@@ -24,7 +24,7 @@ def main():
 
     # init asynchronous "threading" stream handlers
     video_stream = VideoStreamHandler("http://localhost:8081/stream/video.mjpeg")
-    arduino_stream = ArduinoStreamHandler(server,data)
+    arduino_stream = ArduinoStreamHandler(server,json.dumps(data))
 
     # start streams
     video_stream.start()

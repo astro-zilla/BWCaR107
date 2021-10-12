@@ -1,5 +1,6 @@
 import cv2
 
+from Daedalus.Image import undistort
 from Daedalus.StreamHandlers import VideoStreamHandler
 
 
@@ -9,6 +10,7 @@ def main():
 
     while True:
         frame = video_stream.frame
+        frame = undistort(frame, balance=0.5)
         cv2.imshow('frame', frame)
 
 

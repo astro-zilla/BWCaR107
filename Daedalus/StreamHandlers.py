@@ -28,6 +28,8 @@ class VideoStreamHandler(threading.Thread):
     def run(self):
         while not self.terminated:
             ret, frame = self.cap.read()  # read frame from stream (blocking)
+            if self.cap is None:
+                self.connect(self.source)
             if frame is not None:
                 self.frame = frame
                 self.times.append(time.time())

@@ -12,7 +12,7 @@ char identity[] = SECRET_IDENTITY;
 int keyIndex = 0;                       // your network key index number (needed only for WEP)
 
 // dell-g5 over Orang
-IPAddress server(10,9,42,235);
+IPAddress server(10,248,151,172);
 int port = 53282;
 
 // wifi setup
@@ -89,7 +89,8 @@ void setup() {
     printWifiStatus(); // ###REMOVE BEFORE FIRE###
 
     //int err = WiFi.hostByName('dell-g5',server);
-
+    Serial.print("Attempting to connect to IP: ");
+    Serial.println(server);
     if (client.connect(server,port)) {
         Serial.print("connected to: ");
         Serial.println(server);
