@@ -1,4 +1,4 @@
-import cv2,json,socket,time
+import cv2, json, socket, time
 
 from Daedalus.utils.StreamHandlers import ArduinoStreamHandler, VideoStreamHandler
 from Daedalus.utils.Image import undistort, square
@@ -48,7 +48,7 @@ def main():
 
         # get video data from stream
         frame = video_stream.frame
-        cv2.imshow('raw',frame)
+        cv2.imshow('raw', frame)
         frame = undistort(frame, balance=0.5)
 
         frame = square(frame)

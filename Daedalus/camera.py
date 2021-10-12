@@ -1,8 +1,7 @@
 import cv2
+import numpy as np
 from Daedalus.utils.StreamHandlers import VideoStreamHandler
 from Daedalus.utils.Image import undistort, square
-import numpy as np
-
 
 def main():
 

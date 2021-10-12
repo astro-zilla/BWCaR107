@@ -1,12 +1,66 @@
-import socket
-import threading
 import time
+from threading import Thread
+from socket import error as socketError
 
 import cv2
 import numpy as np
 
 
-class VideoStreamHandler(threading.Thread):
+class ArduinoStreamHandler(Thread):
+    def __init__(self, server, data):
+        super().__init__()
+
+        self.server = server
+        self.server.settimeout(1)
+        self.client = None
+        self.file = None
+        self.terminated = False
+        self.out_data = data
+        self.in_data = ''
+
+    def connect(self):
+        try:
+            self.client, addr = self.server.accept()
+            print(f'# recieved connection from arduino: {addr[0]}:{addr[1]}')
+            self.file = self.client.makefile()  # file access for reads ensures full reads
+            self.client.send(bytes(self.out_data, 'utf8'))
+            self.in_data = self.file.readline()  # readline to ensure full read of JSON
+            print('# arduino datastream initiated')
+            return True
+        except socketError:
+            return False
+
+    def run(self):
+        while not self.terminated:
+            if self.client is None:
+                self.connect()
+                continue
+            try:
+                self.client.send(bytes(self.out_data, 'utf8'))
+                self.in_data = self.file.readline()
+            except ConnectionAbortedError:
+                print(f'connection to arduino lost, reconnecting...')
+                self.connect()
+                print('# arduino datastream recovered')
+
+        # exit gracefully
+        if self.file:
+            self.file.close()
+        if self.client:
+            self.client.close()
+        print('# arduino connection successfully terminated')
+
+    def set_data(self, data):
+        self.out_data = data
+
+    def get_data(self):
+        return self.in_data
+
+    def terminate(self):
+        self.terminated = True
+
+
+class VideoStreamHandler(Thread):
     def __init__(self, source):
         super().__init__()
         self.cap = None
@@ -48,60 +102,6 @@ class VideoStreamHandler(threading.Thread):
             return 0  # fps < 0.1 = 0
         else:
             return 1 / np.mean(np.diff(self.times))  # return calc fps
-
-    def terminate(self):
-        self.terminated = True
-
-
-class ArduinoStreamHandler(threading.Thread):
-    def __init__(self, server, data):
-        super().__init__()
-
-        self.server = server
-        self.server.settimeout(1)
-        self.client = None
-        self.file = None
-        self.terminated = False
-        self.out_data = data
-        self.in_data = ''
-
-    def connect(self):
-        try:
-            self.client, addr = self.server.accept()
-            print(f'# recieved connection from arduino: {addr[0]}:{addr[1]}')
-            self.file = self.client.makefile()  # file access for reads ensures full reads
-            self.client.send(bytes(self.out_data, 'utf8'))
-            self.in_data = self.file.readline()  # readline to ensure full read of JSON
-            print('# arduino datastream initiated')
-            return True
-        except socket.timeout:
-            return False
-
-    def run(self):
-        while not self.terminated:
-            if self.client is None:
-                self.connect()
-                continue
-            try:
-                self.client.send(bytes(self.out_data, 'utf8'))
-                self.in_data = self.file.readline()
-            except ConnectionAbortedError:
-                print(f'connection to arduino lost, reconnecting...')
-                self.connect()
-                print('# arduino datastream recovered')
-
-        # exit gracefully
-        if self.file:
-            self.file.close()
-        if self.client:
-            self.client.close()
-        print('# arduino connection successfully terminated')
-
-    def set_data(self, data):
-        self.out_data = data
-
-    def get_data(self):
-        return self.in_data
 
     def terminate(self):
         self.terminated = True
