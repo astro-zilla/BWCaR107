@@ -4,7 +4,7 @@ import socket
 import time
 
 from StreamHandlers import ArduinoStreamHandler, VideoStreamHandler
-from Image import undistort,square
+from Image import undistort, square
 
 
 def nothing(_): pass
