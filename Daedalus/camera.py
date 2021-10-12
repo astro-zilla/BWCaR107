@@ -47,8 +47,8 @@ def main():
         mask = cv2.inRange(imgHSV, lower, upper)
 
         # values for white line mask
-        lower_line = np.array([0, 0, 213])
-        upper_line = np.array([178, 81, 255])
+        lower_line = np.array([0, 0, 220])
+        upper_line = np.array([178, 27, 255])
         mask_line = cv2.inRange(imgHSV, lower_line, upper_line)
         mask_line_copy = mask_line.copy()
 
@@ -57,18 +57,34 @@ def main():
         upper_block = np.array([179, 255, 255])
         mask_block = cv2.inRange(imgHSV, lower_block, upper_block)
 
+        # values for big red square
+        lower_rsquare = np.array([157, 114, 122])
+        upper_rsquare = np.array([179, 255, 255])
+        mask_rquare = cv2.inRange(imgHSV, lower_rsquare, upper_rsquare)
+
+        # values for big blue square
+        lower_bsquare = np.array([89, 96, 123])
+        upper_bsquare = np.array([143, 255, 255])
+        mask_bsquare = cv2.inRange(imgHSV, lower_bsquare, upper_bsquare)
+
         # display results to see just the effect of the masks
         #cv2.imshow("hsv", imgHSV)
         #cv2.imshow("mask_customizable", mask)
         #cv2.imshow("mask_line", mask_line)
         #cv2.imshow("mask_block", mask_block)
+        #cv2.imshow("mask_rsquare", mask_rsquare)
+        #cv2.imshow("mask_bsquare", mask_bsquare)
 
         # display results with original colours
         img_results_line = cv2.bitwise_and(frame, frame, mask=mask_line)
         img_results_blocks = cv2.bitwise_and(frame, frame, mask=mask_block)
-        cv2.imshow("results_line", img_results_line)
-        cv2.imshow("results_block", img_results_blocks)
-        cv2.imshow("frame", frame)
+        img_results_rsquare = cv2.bitwise_and(frame, frame, mask=mask_rquare)
+        img_results_bsquare = cv2.bitwise_and(frame, frame, mask=mask_bsquare)
+
+        stacked_results = np.concatenate((frame, img_results_blocks), axis=1)
+        stacked_results1 = np.concatenate((img_results_rsquare, img_results_bsquare), axis=1)
+        cv2.imshow("frame and blocks", stacked_results)
+        cv2.imshow("squares", stacked_results1)
 
         # Create a kernel to perform erosion and dilation
         kernel = cv2.getStructuringElement(cv2.MORPH_CROSS, (3, 3))
@@ -89,7 +105,8 @@ def main():
             # Change the original image to the eroded one
             mask_line_copy = eroded_img.copy()
 
-        cv2.imshow("thinned", thin)
+        stacked_results2 = np.concatenate((mask_line, thin), axis=1)
+        cv2.imshow("lines", stacked_results2)
 
         if cv2.waitKey(1) & 0xFF == ord('q'):
             break
