@@ -1,6 +1,5 @@
 import cv2
 from StreamHandlers import VideoStreamHandler
-import os
 import numpy as np
 
 
@@ -54,6 +53,7 @@ def main():
             lower_line = np.array([0, 0, 213])
             upper_line = np.array([178, 81, 255])
             mask_line = cv2.inRange(imgHSV, lower_line, upper_line)
+            mask_line_copy = mask_line.copy()
 
             # values for blocks mask (whether red top or blue top)
             lower_block = np.array([90, 107, 123])
@@ -61,7 +61,7 @@ def main():
             mask_block = cv2.inRange(imgHSV, lower_block, upper_block)
 
             # display results to see just the effect of the masks
-            cv2.imshow("hsv", imgHSV)
+            #cv2.imshow("hsv", imgHSV)
             #cv2.imshow("mask_customizable", mask)
             #cv2.imshow("mask_line", mask_line)
             #cv2.imshow("mask_block", mask_block)
@@ -71,10 +71,32 @@ def main():
             img_results_blocks = cv2.bitwise_and(cropped_img, cropped_img, mask=mask_block)
             cv2.imshow("results_line", img_results_line)
             cv2.imshow("results_block", img_results_blocks)
+            cv2.imshow("cropped original", cropped_img)
+
+            # Create a kernel to perform erosion and dilation
+            kernel = cv2.getStructuringElement(cv2.MORPH_CROSS, (3, 3))
+            # Create an empty skeleton where to store values progressively
+            thin = np.zeros(mask_line_copy.shape, dtype='uint8')
+
+            # while loop until all white pixels are eroded
+            while cv2.countNonZero(mask_line_copy) != 0:
+
+                # Erosion
+                eroded_img = cv2.erode(mask_line_copy, kernel)
+                # Open (erosion+dilation) eroded image
+                opening = cv2.morphologyEx(eroded_img, cv2.MORPH_OPEN, kernel)
+                # Subtract these two
+                subtraction = eroded_img - opening
+                # Add the results of the subtraction to the skeleton
+                thin = cv2.bitwise_or(subtraction, thin)
+                # Change the original image to the eroded one
+                mask_line_copy = eroded_img.copy()
+
+            cv2.imshow("thinned", thin)
 
             if cv2.waitKey(1) & 0xFF == ord('q'):
                 break
-    #video_stream.terminate()
+        #video_stream.terminate()
 
 
 if __name__ == "__main__":
