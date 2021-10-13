@@ -4,7 +4,7 @@ import numpy as np
 from Daedalus.utils.Image import square, undistort
 from Daedalus.utils.StreamHandlers import VideoStreamHandler
 
-points = np.int32([[140,722],[214,59],[871,95],[849,787]])
+points = np.int32([[153,710],[223,61],[863,100],[834,766]])
 
 
 def draw_circle(event, x, y, flags, param):

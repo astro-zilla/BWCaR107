@@ -16,8 +16,6 @@ def main():
     video_stream = VideoStreamHandler(0)
     video_stream.start()
 
-    time.sleep(5)
-
     while True:
         frame = video_stream.frame
         arucoDict = cv2.aruco.Dictionary_get(cv2.aruco.DICT_4X4_50)

@@ -47,7 +47,8 @@ def main():
         frame = video_stream.frame
         frame = undistort(frame, balance=0.5)
 
-        frame = square(frame)
+
+        #frame = square(frame)
         overlay = frame.copy()
         output = frame.copy()
 

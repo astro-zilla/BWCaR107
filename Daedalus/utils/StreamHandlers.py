@@ -73,18 +73,19 @@ class VideoStreamHandler(Thread):
     def __init__(self, source):
         super().__init__()
         self.cap = None
-        self.width = 1016
-        self.height = 760
+        self.width = 300
+        self.height = 150
         self.terminated = False
-        self.frame = np.zeros((760, 1016, 3))
+        self.frame = np.zeros((self.height, self.width, 3),dtype='uint8')
+        cv2.putText(self.frame, 'NO SIGNAL', (self.width//2-80, self.height//2), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255), 2)
         self.times = [0] * 10  # init list of frame arrival times to calculate fps
         self.source = source
         self.connect(self.source)
 
     def connect(self, source):
         self.cap = cv2.VideoCapture(source)
-        self.width = self.cap.get(cv2.CAP_PROP_FRAME_WIDTH)
-        self.height = self.cap.get(cv2.CAP_PROP_FRAME_HEIGHT)
+        self.width = int(self.cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+        self.height = int(self.cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
         print('# camera datastream initiated')
 
     def run(self):
@@ -99,6 +100,9 @@ class VideoStreamHandler(Thread):
                 self.times = self.times[-10:]  # keep 10-buffer of frame times to calc avg
             else:
                 self.cap.release()
+                self.frame = np.zeros((self.height, self.width, 3), dtype='uint8')
+                cv2.putText(self.frame, 'NO SIGNAL', (self.width // 2 - 80, self.height // 2), cv2.FONT_HERSHEY_SIMPLEX, 1,
+                            (255, 255, 255), 2)
                 print('# camera connection lost... retrying')
                 self.connect(self.source)
 

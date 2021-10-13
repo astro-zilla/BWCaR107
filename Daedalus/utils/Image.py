@@ -1,25 +1,43 @@
+import warnings
+
 import cv2
 import numpy as np
+"""    if source == 0:
+        DIM = (1016, 760)
+        K = np.array(
+            [[644.0995890009748, 0.0, 514.3136068698651], [0.0, 645.7478380069424, 401.9020082118956], [0.0, 0.0, 1.0]])
+        D = np.array([[-0.16047886876042616], [0.5186348922845948], [-1.0904314778194455], [0.8084994142726131]])
+    else:
+        DIM = (1016, 760)
+        K = np.array(
+            [[1058.1023742892644, 0.0, 512.955162129911], [0.0, 1061.107506095904, 391.3875769097182], [0.0, 0.0, 1.0]])
+        D = np.array([[-1.0091055968032048], [2.686215769977072], [-9.543542386366333], [18.128853807009133]])"""
 
-source = 1
-if source == 0:
-    DIM = (1016, 760)
-    K = np.array([[644.0995890009748, 0.0, 514.3136068698651], [0.0, 645.7478380069424, 401.9020082118956], [0.0, 0.0, 1.0]])
-    D = np.array([[-0.16047886876042616], [0.5186348922845948], [-1.0904314778194455], [0.8084994142726131]])
-else:
-    DIM = (1016, 760)
-    K = np.array(
-        [[1755.3785742532216, 0.0, 514.8025594784805], [0.0, 1776.2509154908232, 386.5369111505285], [0.0, 0.0, 1.0]])
-    D = np.array([[-3.648490408032536], [36.0872172086949], [-348.7599801137575], [1495.0899545935063]])
 
 
-def undistort(img, balance=0.0, dim2=None, dim3=None):
-    # img = cv2.resize(img, DIM)
+def undistort(img, balance=0.0, source=0, dim2=None, dim3=None):
+    if source == 0:
+        DIM = (1016, 760)
+        K = np.array(
+            [[644.0995890009748, 0.0, 514.3136068698651], [0.0, 645.7478380069424, 401.9020082118956], [0.0, 0.0, 1.0]])
+        D = 1.3*np.array([[-0.16047886876042616], [0.5186348922845948], [-1.0904314778194455], [0.8084994142726131]])
+    else:
+        DIM = (1016, 760)
+        K = np.array(
+            [[1058.1023742892644, 0.0, 512.955162129911], [0.0, 1061.107506095904, 391.3875769097182], [0.0, 0.0, 1.0]])
+        D = np.array([[-1.0091055968032048], [2.686215769977072], [-9.543542386366333], [18.128853807009133]])
+
+    img = cv2.resize(img, DIM)
+
     dim1 = img.shape[:2][::-1]  # dim1 is the dimension of input image to un-distort
+    try:
+        assert dim1[0] / dim1[1] == DIM[0] / DIM[1], ("Image to undistort needs to"
+                                                      " have same aspect ratio as the"
+                                                      " ones used in calibration")
+    except ZeroDivisionError or AssertionError:
+        warnings.warn("can't undidstort")
+        return img
 
-    assert dim1[0] / dim1[1] == DIM[0] / DIM[1], ("Image to undistort needs to"
-                                                  " have same aspect ratio as the"
-                                                  " ones used in calibration")
     if not dim2:
         dim2 = dim1
     if not dim3:
