@@ -4,6 +4,8 @@ from Daedalus.utils.StreamHandlers import VideoStreamHandler
 from Daedalus.utils.Image import undistort, square
 from Daedalus.utils.centroid_tracker import get_main_contours, get_centroid
 from Daedalus.utils.colour_tracker import thinning_algorithm
+from Daedalus.utils.navigation import angle_finder
+
 
 def main():
 
@@ -86,9 +88,16 @@ def main():
             pass
         else:
             position_red = get_centroid(im1, contours1)
+            robot_position = (300, 300)
+            pointing_position = (100, 100)
+            angle = angle_finder(im1, robot_position, position_red, pointing_position)
 
         cv2.imshow("im", im)
         cv2.imshow("im1", im1)
+
+
+        # get line from robot to red_square
+        #robot_position =
 
         if cv2.waitKey(1) & 0xFF == ord('q'):
             break
