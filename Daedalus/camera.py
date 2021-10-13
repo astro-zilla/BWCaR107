@@ -2,6 +2,7 @@ import cv2
 import numpy as np
 from Daedalus.utils.StreamHandlers import VideoStreamHandler
 from Daedalus.utils.Image import undistort, square
+from Daedalus.utils.centroid_tracker import get_main_contours, get_centroid
 
 def main():
 
@@ -107,9 +108,18 @@ def main():
         stacked_results2 = np.concatenate((mask_line, thin), axis=1)
         cv2.imshow("lines", stacked_results2)
 
-        if cv2.waitKey(1) & 0xFF == ord('q'):
+        # find centroid of big square for direction
+        im = np.zeros(mask_bsquare.shape, "uint8")
+
+        contours = get_main_contours(mask_bsquare, 300)
+        position = get_centroid(im, contours)
+
+        cv2.imshow("im", im)
+
+      if cv2.waitKey(1) & 0xFF == ord('q'):
             break
-        video_stream.terminate()
+
+    video_stream.terminate()
 
 
 if __name__ == "__main__":
