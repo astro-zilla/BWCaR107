@@ -33,7 +33,7 @@ def main():
         # values for big red square
         lower_rsquare = np.array([157, 114, 122])
         upper_rsquare = np.array([179, 255, 255])
-        mask_rquare = cv2.inRange(imgHSV, lower_rsquare, upper_rsquare)
+        mask_rsquare = cv2.inRange(imgHSV, lower_rsquare, upper_rsquare)
 
         # values for big blue square
         lower_bsquare = np.array([89, 96, 123])
@@ -48,9 +48,8 @@ def main():
         #cv2.imshow("mask_bsquare", mask_bsquare)
 
         # display results with original colours
-        img_results_line = cv2.bitwise_and(frame, frame, mask=mask_line)
         img_results_blocks = cv2.bitwise_and(frame, frame, mask=mask_block)
-        img_results_rsquare = cv2.bitwise_and(frame, frame, mask=mask_rquare)
+        img_results_rsquare = cv2.bitwise_and(frame, frame, mask=mask_rsquare)
         img_results_bsquare = cv2.bitwise_and(frame, frame, mask=mask_bsquare)
 
         stacked_results = np.concatenate((frame, img_results_blocks), axis=1)
@@ -67,13 +66,29 @@ def main():
         # find centroid of big square for direction
         im = np.zeros(mask_bsquare.shape, "uint8")
 
+        # get contours of blue mask
         contours = get_main_contours(mask_bsquare, 300)
+
+        # get position of the centroid
         if len(contours) == 0:
             pass
         else:
-            position = get_centroid(im, contours)
+            position_blue = get_centroid(im, contours)
+
+        # find centroid of the red square
+        im1 = np.zeros(mask_rsquare.shape, "uint8")
+
+        # get contours of blue mask
+        contours1 = get_main_contours(mask_rsquare, 300)
+
+        # get position of the centroid
+        if len(contours) == 0:
+            pass
+        else:
+            position_red = get_centroid(im1, contours1)
 
         cv2.imshow("im", im)
+        cv2.imshow("im1", im1)
 
         if cv2.waitKey(1) & 0xFF == ord('q'):
             break
