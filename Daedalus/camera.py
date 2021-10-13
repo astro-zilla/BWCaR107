@@ -9,21 +9,6 @@ def main():
     video_stream = VideoStreamHandler("http://localhost:8081/stream/video.mjpeg")
     video_stream.start()
 
-    def empty(x):
-        pass
-
-    # create window for trackbars
-    cv2.namedWindow("TrackBars")
-    cv2.resizeWindow("TrackBars", 640, 1000)
-
-    # create trackbars to adjust different colour parameters
-    cv2.createTrackbar("Hue Min", "TrackBars", 0, 179, empty)
-    cv2.createTrackbar("Hue Max", "TrackBars", 179, 179, empty)
-    cv2.createTrackbar("Sat Min", "TrackBars", 0, 255, empty)
-    cv2.createTrackbar("Sat Max", "TrackBars", 255, 255, empty)
-    cv2.createTrackbar("Val Min", "TrackBars", 0, 255, empty)
-    cv2.createTrackbar("Val Max", "TrackBars", 255, 255, empty)
-
     while True:
 
         frame = video_stream.frame
@@ -32,19 +17,6 @@ def main():
 
         # use HSV colour system for detection
         imgHSV = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
-
-        # get the different values from the trackbars
-        h_min = cv2.getTrackbarPos("Hue Min", "TrackBars")
-        h_max = cv2.getTrackbarPos("Hue Max", "TrackBars")
-        s_min = cv2.getTrackbarPos("Sat Min", "TrackBars")
-        s_max = cv2.getTrackbarPos("Sat Max", "TrackBars")
-        v_min = cv2.getTrackbarPos("Val Min", "TrackBars")
-        v_max = cv2.getTrackbarPos("Val Max", "TrackBars")
-
-        # values for customizable mask
-        lower = np.array([h_min, s_min, v_min])
-        upper = np.array([h_max, s_max, v_max])
-        mask = cv2.inRange(imgHSV, lower, upper)
 
         # values for white line mask
         lower_line = np.array([0, 0, 220])
@@ -69,7 +41,6 @@ def main():
 
         # display results to see just the effect of the masks
         #cv2.imshow("hsv", imgHSV)
-        #cv2.imshow("mask_customizable", mask)
         #cv2.imshow("mask_line", mask_line)
         #cv2.imshow("mask_block", mask_block)
         #cv2.imshow("mask_rsquare", mask_rsquare)
@@ -112,17 +83,18 @@ def main():
         im = np.zeros(mask_bsquare.shape, "uint8")
 
         contours = get_main_contours(mask_bsquare, 300)
-        position = get_centroid(im, contours)
+        if len(contours) == 0:
+            pass
+        else:
+            position = get_centroid(im, contours)
 
         cv2.imshow("im", im)
 
-      if cv2.waitKey(1) & 0xFF == ord('q'):
+        if cv2.waitKey(1) & 0xFF == ord('q'):
             break
-
     video_stream.terminate()
 
 
 if __name__ == "__main__":
     main()
-
 
