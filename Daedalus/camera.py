@@ -2,9 +2,8 @@ import cv2
 import numpy as np
 from Daedalus.utils.StreamHandlers import VideoStreamHandler
 from Daedalus.utils.Image import undistort, square
-from Daedalus.utils.centroid_tracker import get_main_contours, get_centroid
 from Daedalus.utils.colour_tracker import thinning_algorithm
-from Daedalus.utils.navigation import angle_finder
+from Daedalus.utils.navigation import angle_finder, get_main_contours, get_centroid
 
 
 def main():
@@ -67,37 +66,34 @@ def main():
 
         # find centroid of big square for direction
         im = np.zeros(mask_bsquare.shape, "uint8")
-
         # get contours of blue mask
         contours = get_main_contours(mask_bsquare, 300)
-
         # get position of the centroid
         if len(contours) == 0:
             pass
         else:
             position_blue = get_centroid(im, contours)
+            # get direction
+            robot_position = (300, 300)
+            pointing_position = (100, 100)
+            angle_red = angle_finder(im, robot_position, position_blue, pointing_position)
 
-        # find centroid of the red square
+        # find centroid of the red square for direction
         im1 = np.zeros(mask_rsquare.shape, "uint8")
-
-        # get contours of blue mask
+        # get contours of red mask
         contours1 = get_main_contours(mask_rsquare, 300)
-
         # get position of the centroid
         if len(contours) == 0:
             pass
         else:
             position_red = get_centroid(im1, contours1)
+            # get direction
             robot_position = (300, 300)
             pointing_position = (100, 100)
-            angle = angle_finder(im1, robot_position, position_red, pointing_position)
+            angle_red = angle_finder(im1, robot_position, position_red, pointing_position)
 
         cv2.imshow("im", im)
         cv2.imshow("im1", im1)
-
-
-        # get line from robot to red_square
-        #robot_position =
 
         if cv2.waitKey(1) & 0xFF == ord('q'):
             break
