@@ -36,3 +36,27 @@ def customizable_mask(img):
     mask = cv2.inRange(imgHSV, lower, upper)
 
     return mask
+
+
+def thinning_algorithm(img):
+
+    # Create a kernel to perform erosion and dilation
+    kernel = cv2.getStructuringElement(cv2.MORPH_CROSS, (3, 3))
+    # Create an empty skeleton where to store values progressively
+    thin = np.zeros(img.shape, dtype='uint8')
+    img_copy = img.copy()
+
+    # while loop until all white pixels are eroded
+    while cv2.countNonZero(img_copy) != 0:
+        # Erosion
+        eroded_img = cv2.erode(img_copy, kernel)
+        # Open (erosion+dilation) eroded image
+        opening = cv2.morphologyEx(eroded_img, cv2.MORPH_OPEN, kernel)
+        # Subtract these two
+        subtraction = eroded_img - opening
+        # Add the results of the subtraction to the skeleton
+        thin = cv2.bitwise_or(subtraction, thin)
+        # Change the original image to the eroded one
+        img_copy = eroded_img.copy()
+
+    return thin

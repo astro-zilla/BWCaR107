@@ -3,6 +3,7 @@ import numpy as np
 from Daedalus.utils.StreamHandlers import VideoStreamHandler
 from Daedalus.utils.Image import undistort, square
 from Daedalus.utils.centroid_tracker import get_main_contours, get_centroid
+from Daedalus.utils.colour_tracker import thinning_algorithm
 
 def main():
 
@@ -57,24 +58,8 @@ def main():
         cv2.imshow("frame and blocks", stacked_results)
         cv2.imshow("squares", stacked_results1)
 
-        # Create a kernel to perform erosion and dilation
-        kernel = cv2.getStructuringElement(cv2.MORPH_CROSS, (3, 3))
-        # Create an empty skeleton where to store values progressively
-        thin = np.zeros(mask_line_copy.shape, dtype='uint8')
-
-        # while loop until all white pixels are eroded
-        while cv2.countNonZero(mask_line_copy) != 0:
-
-            # Erosion
-            eroded_img = cv2.erode(mask_line_copy, kernel)
-            # Open (erosion+dilation) eroded image
-            opening = cv2.morphologyEx(eroded_img, cv2.MORPH_OPEN, kernel)
-            # Subtract these two
-            subtraction = eroded_img - opening
-            # Add the results of the subtraction to the skeleton
-            thin = cv2.bitwise_or(subtraction, thin)
-            # Change the original image to the eroded one
-            mask_line_copy = eroded_img.copy()
+        # get a thinner version to create a path or reduce image noise
+        thin = thinning_algorithm(mask_line_copy)
 
         stacked_results2 = np.concatenate((mask_line, thin), axis=1)
         cv2.imshow("lines", stacked_results2)
