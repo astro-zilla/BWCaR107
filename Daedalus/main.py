@@ -5,8 +5,8 @@ import time
 import cv2
 import numpy as np
 
-from Daedalus.utils.aruco import visualise
 from Daedalus.utils.Image import square, undistort
+from Daedalus.utils.aruco import visualise
 from Daedalus.utils.navigation import just_angle
 from Daedalus.utils.streaming import ArduinoStreamHandler, VideoStreamHandler
 
@@ -57,19 +57,34 @@ def main():
         frame = square(frame)
         dictionary = {}
         frame = visualise(frame, dictionary)
+        a = 0
         if 2 in dictionary.keys():
             position = dictionary[2][0]
             heading = dictionary[2][1]
             a = just_angle(position, heading, np.int32([0, 0]))
-            print(a)
+            p = np.int32(([0, 0] + 10 * position) / 11)
+            cv2.line(frame, position, p, (255, 0, 0), 2)
 
         overlay = frame.copy()
         output = frame.copy()
 
         # draw info bar and fps
-        cv2.rectangle(overlay, (0, 0), (150, 60), (50, 50, 50), -1)
-        cv2.putText(img=overlay, text=f'FPS: {video_stream.get_rate():.1f}', org=(20, 30), fontFace=cv2.FONT_HERSHEY_TRIPLEX,
-                    fontScale=0.5, color=(255, 255, 255), thickness=1)
+        cv2.rectangle(overlay, (0, 0), (220, 130), (50, 50, 50), -1)
+        cv2.putText(img=overlay, text=f'RATES:',
+                    org=(20, 30),
+                    fontFace=cv2.FONT_HERSHEY_TRIPLEX, fontScale=0.5, color=(255, 255, 255), thickness=1)
+        cv2.putText(img=overlay, text=f'    VIDEO: {video_stream.get_rate():.1f} fps',
+                    org=(20, 50),
+                    fontFace=cv2.FONT_HERSHEY_TRIPLEX, fontScale=0.5, color=(255, 255, 255), thickness=1)
+        cv2.putText(img=overlay, text=f'    ARDUINO: {arduino_stream.get_rate():.1f} Hz',
+                    org=(20, 70),
+                    fontFace=cv2.FONT_HERSHEY_TRIPLEX, fontScale=0.5, color=(255, 255, 255), thickness=1)
+        cv2.putText(img=overlay, text=f'DATA:',
+                    org=(20, 90),
+                    fontFace=cv2.FONT_HERSHEY_TRIPLEX, fontScale=0.5, color=(255, 255, 255), thickness=1)
+        cv2.putText(img=overlay, text=f'    angle: {a:.1f} deg',
+                    org=(20, 110),
+                    fontFace=cv2.FONT_HERSHEY_TRIPLEX, fontScale=0.5, color=(255, 255, 255), thickness=1)
         cv2.addWeighted(overlay, 0.8, frame, 0.2, 0, output)
 
         # output to frame
