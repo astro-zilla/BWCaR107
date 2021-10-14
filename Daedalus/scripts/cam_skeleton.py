@@ -1,6 +1,6 @@
 import cv2
 
-from Daedalus.utils.Aruco import visualise
+from Daedalus.utils.aruco import visualise
 from Daedalus.utils.streaming import VideoStreamHandler
 
 

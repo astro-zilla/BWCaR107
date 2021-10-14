@@ -1,10 +1,13 @@
-import cv2
 import json
 import socket
 import time
 
-from Daedalus.utils.Aruco import visualise
+import cv2
+import numpy as np
+
+from Daedalus.utils.aruco import visualise
 from Daedalus.utils.Image import square, undistort
+from Daedalus.utils.navigation import just_angle
 from Daedalus.utils.streaming import ArduinoStreamHandler, VideoStreamHandler
 
 
@@ -52,8 +55,13 @@ def main():
         frame = video_stream.frame
         frame = undistort(frame, balance=0.5)
         frame = square(frame)
-
-        frame = visualise(frame)
+        dictionary = {}
+        frame = visualise(frame, dictionary)
+        if 2 in dictionary.keys():
+            position = dictionary[2][0]
+            heading = dictionary[2][1]
+            a = just_angle(position, heading, np.int32([0, 0]))
+            print(a)
 
         overlay = frame.copy()
         output = frame.copy()
