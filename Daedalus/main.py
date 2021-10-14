@@ -10,8 +10,15 @@ from Daedalus.utils.aruco import visualise
 from Daedalus.utils.navigation import just_angle
 from Daedalus.utils.streaming import ArduinoStreamHandler, VideoStreamHandler
 
+mX, mY = 0, 0
+
 
 def nothing(_): pass
+
+
+def mouse(event, x, y, flags, params):
+    global mX,mY
+    mX, mY = x, y
 
 
 def main():
@@ -35,10 +42,14 @@ def main():
 
     start_time = int(time.time_ns() / 1000000)
     img_count = 0
+    robot_aruco_id = 2
 
     cv2.namedWindow('sliders', cv2.WINDOW_AUTOSIZE)
     cv2.createTrackbar('motor 1', 'sliders', 0, 255, nothing)
     cv2.createTrackbar('motor 2', 'sliders', 0, 255, nothing)
+
+    cv2.namedWindow('frame', cv2.WINDOW_AUTOSIZE)
+    cv2.setMouseCallback('frame',mouse)
 
     while True:
         # input run-time to data array
@@ -58,12 +69,12 @@ def main():
         dictionary = {}
         frame = visualise(frame, dictionary)
         a = 0
-        if 2 in dictionary.keys():
-            position = dictionary[2][0]
-            heading = dictionary[2][1]
-            a = just_angle(position, heading, np.int32([0, 0]))
-            p = np.int32(([0, 0] + 10 * position) / 11)
-            cv2.line(frame, position, p, (255, 0, 0), 2)
+        if robot_aruco_id in dictionary.keys():
+            position, heading = dictionary[robot_aruco_id]
+            a = just_angle(position, heading, np.int32([mX,mY]))
+            v = [mX, mY] - position
+            h = position + np.int32(50 * v / np.linalg.norm(v))
+            cv2.line(frame, position, h, (255, 0, 0), 2)
 
         overlay = frame.copy()
         output = frame.copy()

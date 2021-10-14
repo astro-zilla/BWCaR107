@@ -28,7 +28,7 @@ def visualise(frame, data={}):
             heading = heading / np.linalg.norm(heading)
             data[markerID] = [position, heading]
 
-            cv2.line(frame, position, position + np.int32(40 * heading), (255, 0, 0), 2)
+            cv2.line(frame, position, position + np.int32(50 * heading), (255, 0, 0), 2)
             cv2.circle(frame, position, 4, (0, 0, 255), -1)
             # draw the ArUco marker ID on the frame
             cv2.putText(frame, str(markerID), np.int32((5 * corner[3] - position) / 4 + [-5, 5]),
