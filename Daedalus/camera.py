@@ -73,11 +73,10 @@ def main():
         if len(contours) == 0:
             pass
         else:
-            position_blue = get_centroid(im, contours)
+            position_blue = np.array(get_centroid(im, contours), dtype='uint8')
             # get direction
             position_heading = {}
             visualise(frame, position_heading)
-            print(position_heading)
             array_1 = position_heading.get(2)
             if array_1 != None:
                 robot_position = array_1[0]
@@ -85,9 +84,9 @@ def main():
                 angle_blue = angle_finder(im, robot_position, position_blue, header)
                 if 10 < angle_blue <= 180:
                     print("Turn Right.")
-                if 180 < angle_blue < 350:
+                elif 180 < angle_blue < 350:
                     print("Turn Left.")
-                else:
+                elif angle_blue <= 10 or angle_blue >= 360:
                     print("Go straight")
 
         # find centroid of the red square for direction
@@ -95,18 +94,29 @@ def main():
         # get contours of red mask
         contours1 = get_main_contours(mask_rsquare, 300)
         # get position of the centroid
-        if len(contours) == 0:
+        if len(contours1) == 0:
             pass
         else:
-            position_red = get_centroid(im1, contours1)
+            position_red = np.array(get_centroid(im1, contours1), dtype='uint8')
             # get direction
-            robot_position = (300, 300)
-            pointing_position = (100, 100)
-            angle_red = angle_finder(im1, robot_position, position_red, pointing_position)
+            position_heading1 = {}
+            visualise(frame, position_heading1)
+            array1 = position_heading1.get(2)
+            if array1 != None:
+                robot_position1 = array1[0]
+                header1 = array1[1]
+                angle_red = angle_finder(im1, robot_position1, position_red, header1)
+                if 10 < angle_red <= 180:
+                    print("Turn Right.")
+                elif 180 < angle_red < 350:
+                    print("Turn Left.")
+                elif angle_red <= 10 or angle_red >= 360:
+                    print("Go straight")
+            pass
 
 
         cv2.imshow("im", im)
-        #cv2.imshow("im1", im1)
+        cv2.imshow("im1", im1)
 
         if cv2.waitKey(1) & 0xFF == ord('q'):
             break
