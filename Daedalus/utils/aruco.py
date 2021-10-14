@@ -24,14 +24,14 @@ def visualise(frame, data={}):
                 cv2.line(frame, corner[i], corner[(i + 1) % 4], (0, 255, 0), 2)
 
             position = np.int32(np.mean(corner, axis=0))
-            heading = (corner[0] - corner[3] + corner[1] - corner[2])//2
+            heading = np.array((corner[0] - corner[3] + corner[1] - corner[2]) / 2)
+            heading = heading / np.linalg.norm(heading)
             data[markerID] = [position, heading]
 
-            cv2.line(frame, position, position+heading, (255,0,0), 2)
+            cv2.line(frame, position, position + np.int32(40 * heading), (255, 0, 0), 2)
             cv2.circle(frame, position, 4, (0, 0, 255), -1)
             # draw the ArUco marker ID on the frame
-            cv2.putText(frame, str(markerID), np.int32((5*corner[3]-position)/4+[-5,5]),
+            cv2.putText(frame, str(markerID), np.int32((5 * corner[3] - position) / 4 + [-5, 5]),
                         cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
 
     return frame
-

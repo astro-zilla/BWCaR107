@@ -35,8 +35,7 @@ def get_centroid(img, contours):
 
 
 # finds angles
-def angle_finder(img, robot_position, destination, heading):
-
+def angle_finder(img, robot_position, destination, pointing_position):
     path_vector = destination - robot_position
 
     path_magnitude = np.linalg.norm(path_vector)
@@ -49,3 +48,13 @@ def angle_finder(img, robot_position, destination, heading):
                 cv2.LINE_AA)
 
     return angle_degrees
+
+
+def just_angle(position, heading, target):
+    to_target = target - position
+    rads = np.arctan2(to_target[1], to_target[0]) - np.arctan2(heading[1], heading[0])
+    if rads > np.pi:
+        rads -= 2 * np.pi
+    elif rads <= -np.pi:
+        rads += 2 * np.pi
+    return (rads * 180) / np.pi

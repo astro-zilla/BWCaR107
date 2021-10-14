@@ -4,7 +4,7 @@ from Daedalus.utils.streaming import VideoStreamHandler
 from Daedalus.utils.Image import undistort, square
 from Daedalus.utils.colour_tracker import thinning_algorithm
 from Daedalus.utils.navigation import angle_finder, get_main_contours, get_centroid
-from Daedalus.utils.Aruco import visualise
+from Daedalus.utils.aruco import visualise
 
 
 def main():
