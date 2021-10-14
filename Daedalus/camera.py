@@ -73,7 +73,7 @@ def main():
         if len(contours) == 0:
             pass
         else:
-            position_blue = np.array(get_centroid(im, contours), dtype='uint8')
+            position_blue = np.asarray(get_centroid(im, contours))
             # get direction
             position_heading = {}
             visualise(frame, position_heading)
@@ -97,15 +97,15 @@ def main():
         if len(contours1) == 0:
             pass
         else:
-            position_red = np.array(get_centroid(im1, contours1), dtype='uint8')
+            position_red = np.asarray(get_centroid(im1, contours1))
             # get direction
             position_heading1 = {}
             visualise(frame, position_heading1)
             array1 = position_heading1.get(2)
             if array1 != None:
-                robot_position1 = array1[0]
+                robot_position = array1[0]
                 header1 = array1[1]
-                angle_red = angle_finder(im1, robot_position1, position_red, header1)
+                angle_red = angle_finder(im1, robot_position, position_red, header1)
                 if 10 < angle_red <= 180:
                     print("Turn Right.")
                 elif 180 < angle_red < 350:
