@@ -76,7 +76,13 @@ def main():
             # get direction
             robot_position = (300, 300)
             pointing_position = (100, 100)
-            angle_red = angle_finder(im, robot_position, position_blue, pointing_position)
+            angle_blue = angle_finder(im, robot_position, position_blue, pointing_position)
+            if angle_blue > 10 or angle_blue <= 180:
+                print("Turn Right.")
+            if angle_blue > 180 or angle_blue < 350:
+                print("Turn Left.")
+            else:
+                print("Go straight")
 
         # find centroid of the red square for direction
         im1 = np.zeros(mask_rsquare.shape, "uint8")
@@ -91,6 +97,7 @@ def main():
             robot_position = (300, 300)
             pointing_position = (100, 100)
             angle_red = angle_finder(im1, robot_position, position_red, pointing_position)
+
 
         cv2.imshow("im", im)
         cv2.imshow("im1", im1)
