@@ -31,6 +31,7 @@ def main():
     arduino_stream.start()
 
     start_time = int(time.time_ns() / 1000000)
+    img_count = 0
 
     cv2.namedWindow('sliders', cv2.WINDOW_AUTOSIZE)
     cv2.createTrackbar('motor 1', 'sliders', 0, 255, nothing)
@@ -52,7 +53,7 @@ def main():
         frame = undistort(frame, balance=0.5)
         frame = square(frame)
 
-        dictionary = visualise(frame)
+        frame = visualise(frame)
 
         overlay = frame.copy()
         output = frame.copy()
@@ -67,8 +68,14 @@ def main():
         cv2.imshow('frame', output)
 
         # press q key to exit
-        if cv2.waitKey(1) & 0xFF == ord('q'):
+        k = cv2.waitKey(1)
+        if k & 0xFF == ord('q'):
             break
+        # spacebar to capture a screenshot
+        elif k & 0xFF == ord(' '):
+            cv2.imwrite(f'screenshots/frame{str(img_count).zfill(5)}.png', output)
+            img_count += 1
+            print(f'image saved to: screenshots/frame{str(img_count).zfill(5)}.png')
 
         if video_stream.terminated or arduino_stream.terminated:
             break
