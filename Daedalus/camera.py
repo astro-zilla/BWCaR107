@@ -4,6 +4,7 @@ from Daedalus.utils.streaming import VideoStreamHandler
 from Daedalus.utils.Image import undistort, square
 from Daedalus.utils.colour_tracker import thinning_algorithm
 from Daedalus.utils.navigation import angle_finder, get_main_contours, get_centroid
+from Daedalus.utils.Aruco import visualise
 
 
 def main():
@@ -74,15 +75,20 @@ def main():
         else:
             position_blue = get_centroid(im, contours)
             # get direction
-            robot_position = (300, 300)
-            pointing_position = (100, 100)
-            angle_blue = angle_finder(im, robot_position, position_blue, pointing_position)
-            if angle_blue > 10 or angle_blue <= 180:
-                print("Turn Right.")
-            if angle_blue > 180 or angle_blue < 350:
-                print("Turn Left.")
-            else:
-                print("Go straight")
+            position_heading = {}
+            visualise(frame, position_heading)
+            print(position_heading)
+            array_1 = position_heading.get(2)
+            if array_1 != None:
+                robot_position = array_1[0]
+                header = array_1[1]
+                angle_blue = angle_finder(im, robot_position, position_blue, header)
+                if 10 < angle_blue <= 180:
+                    print("Turn Right.")
+                if 180 < angle_blue < 350:
+                    print("Turn Left.")
+                else:
+                    print("Go straight")
 
         # find centroid of the red square for direction
         im1 = np.zeros(mask_rsquare.shape, "uint8")
@@ -100,7 +106,7 @@ def main():
 
 
         cv2.imshow("im", im)
-        cv2.imshow("im1", im1)
+        #cv2.imshow("im1", im1)
 
         if cv2.waitKey(1) & 0xFF == ord('q'):
             break
