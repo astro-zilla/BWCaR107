@@ -5,7 +5,6 @@ import time
 
 from Daedalus.utils.Aruco import visualise
 from Daedalus.utils.Image import square, undistort
-from Daedalus.utils.centroid_tracker import get_centroid, get_main_contours
 from Daedalus.utils.streaming import ArduinoStreamHandler, VideoStreamHandler
 
 
@@ -54,7 +53,6 @@ def main():
         frame = square(frame)
 
         dictionary = visualise(frame)
-
 
         overlay = frame.copy()
         output = frame.copy()
