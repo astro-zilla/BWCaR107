@@ -2,6 +2,7 @@ import warnings
 
 import cv2
 import numpy as np
+
 """    if source == 0:
         DIM = (1016, 760)
         K = np.array(
@@ -14,13 +15,12 @@ import numpy as np
         D = np.array([[-1.0091055968032048], [2.686215769977072], [-9.543542386366333], [18.128853807009133]])"""
 
 
-
 def undistort(img, balance=0.0, source=0, dim2=None, dim3=None):
     if source == 0:
         DIM = (1016, 760)
         K = np.array(
             [[644.0995890009748, 0.0, 514.3136068698651], [0.0, 645.7478380069424, 401.9020082118956], [0.0, 0.0, 1.0]])
-        D = 1.3*np.array([[-0.16047886876042616], [0.5186348922845948], [-1.0904314778194455], [0.8084994142726131]])
+        D = 1.1 * np.array([[-0.16047886876042616], [0.5186348922845948], [-1.0904314778194455], [0.8084994142726131]])
     else:
         DIM = (1016, 760)
         K = np.array(
@@ -50,8 +50,7 @@ def undistort(img, balance=0.0, source=0, dim2=None, dim3=None):
 
     new_K = cv2.fisheye.estimateNewCameraMatrixForUndistortRectify(
         scaled_K, D, dim2, np.eye(3), balance=balance)
-    map1, map2 = cv2.fisheye.initUndistortRectifyMap(scaled_K, D, np.eye(3),
-                                                     new_K, dim3, cv2.CV_16SC2)
+    map1, map2 = cv2.fisheye.initUndistortRectifyMap(scaled_K, D, np.eye(3), new_K, dim3, cv2.CV_16SC2)
     return cv2.remap(img, map1, map2, interpolation=cv2.INTER_LINEAR, borderMode=cv2.BORDER_CONSTANT)
 
 
@@ -60,9 +59,8 @@ def square(img, from_pts_in=None):
     if from_pts_in is not None:
         from_pts = from_pts_in
     else:
-        from_pts = np.float32([[131, 729], [215, 54], [873, 90], [850, 789]])
+        from_pts = np.float32([[156, 707], [224, 63], [861, 102], [830, 765]])
     to_pts = np.float32([[0, dim1[1]], [0, 0], [dim1[1], 0], [dim1[1], dim1[1]]])
 
     squaring_M = cv2.getPerspectiveTransform(from_pts, to_pts)
-
     return cv2.warpPerspective(img, squaring_M, (dim1[1], dim1[1]))

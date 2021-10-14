@@ -1,21 +1,26 @@
 import cv2
 
-from Daedalus.utils.Image import undistort
-from Daedalus.utils.StreamHandlers import VideoStreamHandler
+from Daedalus.utils.Aruco import visualise
+from Daedalus.utils.streaming import VideoStreamHandler
 
 
 def main():
-    video_stream = VideoStreamHandler("http://localhost:8081/stream/video.mjpeg")
+    video_stream = VideoStreamHandler(0)  # ("http://localhost:8081/stream/video.mjpeg")
     video_stream.start()
+    data = {}
 
     while True:
         frame = video_stream.frame
 
-        frame0 = undistort(frame, source = 0, balance=0.5)
-        frame1 = undistort(frame,source = 1, balance=0.5)
+        # undistort(frame, balance=0.5)
+        # square(frame)
 
-        cv2.imshow('frame0', frame0)
-        cv2.imshow('frame1', frame1)
+        frame = visualise(frame,data)
+
+        for id in data:
+            print(f'{id}:{data[id]}')
+
+        cv2.imshow('frame', frame)
 
         k = cv2.waitKey(20)
         if k == ord('q'):

@@ -2,9 +2,9 @@ import cv2
 import numpy as np
 
 from Daedalus.utils.Image import square, undistort
-from Daedalus.utils.StreamHandlers import VideoStreamHandler
+from Daedalus.utils.streaming import VideoStreamHandler
 
-points = np.int32([[153,710],[223,61],[863,100],[834,766]])
+points = np.int32([[156, 707], [224, 63], [861, 102], [830, 765]])
 
 
 def draw_circle(event, x, y, flags, param):

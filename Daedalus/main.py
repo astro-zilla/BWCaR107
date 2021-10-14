@@ -1,7 +1,11 @@
-import cv2, json, socket, time
+import cv2
+import json
+import socket
+import time
 
-from Daedalus.utils.StreamHandlers import ArduinoStreamHandler, VideoStreamHandler
-from Daedalus.utils.Image import undistort, square
+from Daedalus.utils.Aruco import visualise
+from Daedalus.utils.Image import square, undistort
+from Daedalus.utils.streaming import ArduinoStreamHandler, VideoStreamHandler
 
 
 def nothing(_): pass
@@ -28,7 +32,7 @@ def main():
 
     start_time = int(time.time_ns() / 1000000)
 
-    cv2.namedWindow('sliders')
+    cv2.namedWindow('sliders', cv2.WINDOW_AUTOSIZE)
     cv2.createTrackbar('motor 1', 'sliders', 0, 255, nothing)
     cv2.createTrackbar('motor 2', 'sliders', 0, 255, nothing)
 
@@ -46,9 +50,10 @@ def main():
         # get video data from stream
         frame = video_stream.frame
         frame = undistort(frame, balance=0.5)
+        frame = square(frame)
 
+        dictionary = visualise(frame)
 
-        #frame = square(frame)
         overlay = frame.copy()
         output = frame.copy()
 

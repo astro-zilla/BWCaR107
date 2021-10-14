@@ -1,6 +1,6 @@
 import cv2
 import numpy as np
-from Daedalus.utils.StreamHandlers import VideoStreamHandler
+from Daedalus.utils.streaming import VideoStreamHandler
 from Daedalus.utils.Image import undistort, square
 from Daedalus.utils.colour_tracker import thinning_algorithm
 from Daedalus.utils.navigation import angle_finder, get_main_contours, get_centroid
