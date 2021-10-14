@@ -14,7 +14,7 @@ def get_main_contours(img, size):
         area = cv2.contourArea(contour)
         if area > size:
             list_contour.append(contour)
-    return list_contour
+    return frame, list_contour
 
 
 # gets the centroid and draws it on the image provided

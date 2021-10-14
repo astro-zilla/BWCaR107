@@ -3,13 +3,10 @@ import time
 import cv2
 import numpy as np
 
-from Daedalus.utils.StreamHandlers import VideoStreamHandler
+from Daedalus.utils.streaming import VideoStreamHandler
 
-
-def generate(id):
-    arucoDict = cv2.aruco.Dictionary_get(cv2.aruco.DICT_4X4_50)
-    tag = np.zeros((300, 300, 1), dtype='uint8')
-    cv2.aruco.drawMarker(arucoDict, id, 300, tag, 1)
+arucoDict = cv2.aruco.Dictionary_get(cv2.aruco.DICT_4X4_50)
+arucoParams = cv2.aruco.DetectorParameters_create()
 
 
 def main():
@@ -18,8 +15,7 @@ def main():
 
     while True:
         frame = video_stream.frame
-        arucoDict = cv2.aruco.Dictionary_get(cv2.aruco.DICT_4X4_50)
-        arucoParams = cv2.aruco.DetectorParameters_create()
+
         corners, ids, rejected = cv2.aruco.detectMarkers(frame, arucoDict, parameters=arucoParams)
 
         # verify *at least* one ArUco marker was detected

@@ -1,6 +1,6 @@
 import cv2
 import numpy as np
-from Daedalus.utils.StreamHandlers import VideoStreamHandler
+from Daedalus.utils.streaming import VideoStreamHandler
 from Daedalus.utils.Image import undistort, square
 from Daedalus.utils.centroid_tracker import get_main_contours, get_centroid
 
@@ -116,7 +116,7 @@ def main():
 
         cv2.imshow("im", im)
 
-      if cv2.waitKey(1) & 0xFF == ord('q'):
+        if cv2.waitKey(1) & 0xFF == ord('q'):
             break
 
     video_stream.terminate()
