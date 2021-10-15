@@ -38,7 +38,7 @@ def main():
         mask_rsquare = cv2.inRange(imgHSV, lower_rsquare, upper_rsquare)
 
         # values for big blue square
-        lower_bsquare = np.array([89, 96, 123])
+        lower_bsquare = np.array([89, 93, 123])
         upper_bsquare = np.array([143, 255, 255])
         mask_bsquare = cv2.inRange(imgHSV, lower_bsquare, upper_bsquare)
 
@@ -68,7 +68,7 @@ def main():
         # find centroid of big square for direction
         im = np.zeros(mask_bsquare.shape, "uint8")
         # get contours of blue mask
-        contours = get_main_contours(mask_bsquare, 300)
+        contours = get_main_contours(mask_bsquare, 500)
         # get position of the centroid
         if len(contours) == 0:
             pass
@@ -92,7 +92,7 @@ def main():
         # find centroid of the red square for direction
         im1 = np.zeros(mask_rsquare.shape, "uint8")
         # get contours of red mask
-        contours1 = get_main_contours(mask_rsquare, 300)
+        contours1 = get_main_contours(mask_rsquare, 500)
         # get position of the centroid
         if len(contours1) == 0:
             pass
@@ -114,9 +114,18 @@ def main():
                     print("Go straight")
             pass
 
+        im3 = np.zeros(mask_block.shape, "uint8")
+        contours3 = get_main_contours(mask_block, 100, 400)
+        if len(contours3) == 0:
+            pass
+        else:
+            position_blocks = get_centroid(im3, contours3)
+
+
 
         cv2.imshow("im", im)
         cv2.imshow("im1", im1)
+        cv2.imshow("IM3", im3)
 
         if cv2.waitKey(1) & 0xFF == ord('q'):
             break
