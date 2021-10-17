@@ -4,21 +4,40 @@ import time
 
 import cv2
 import numpy as np
+from pynput.keyboard import Key, KeyCode, Listener
 
 from Daedalus.utils.Image import square, undistort
-from Daedalus.utils.aruco import visualise
+from Daedalus.utils.aruco import analyse
 from Daedalus.utils.navigation import just_angle
 from Daedalus.utils.streaming import ArduinoStreamHandler, VideoStreamHandler
 
 mX, mY = 0, 0
+keys = set()
+
+key_q = KeyCode.from_char('q')
+
+key_w = KeyCode.from_char('w')
+key_a = KeyCode.from_char('a')
+key_s = KeyCode.from_char('s')
+key_d = KeyCode.from_char('d')
+
+key_f = KeyCode.from_char('f')
+key_t = KeyCode.from_char('t')
+key_p = KeyCode.from_char('p')
 
 
 def nothing(_): pass
 
 
-def mouse(event, x, y, flags, params):
-    global mX,mY
-    mX, mY = x, y
+def on_press(key):
+    keys.add(key)
+
+
+def on_release(key):
+    keys.discard(key)
+    if key == key_q:
+        # Stop listener
+        return False
 
 
 def main():
@@ -35,6 +54,8 @@ def main():
     # init asynchronous "threading" stream handlers
     video_stream = VideoStreamHandler("http://localhost:8081/stream/video.mjpeg")
     arduino_stream = ArduinoStreamHandler(server, json.dumps(data))
+    listener = Listener(on_press=on_press, on_release=on_release)
+    listener.start()
 
     # start streams
     video_stream.start()
@@ -44,88 +65,87 @@ def main():
     img_count = 0
     robot_aruco_id = 2
 
-    cv2.namedWindow('sliders', cv2.WINDOW_AUTOSIZE)
-    cv2.createTrackbar('motor 1', 'sliders', 0, 255, nothing)
-    cv2.createTrackbar('motor 2', 'sliders', 0, 255, nothing)
+    # cv2.namedWindow('sliders', cv2.WINDOW_NORMAL)
+    # cv2.createTrackbar('motor1', 'sliders', 0, 255, nothing)
+    # cv2.createTrackbar('motor2', 'sliders', 0, 255, nothing)
 
-    cv2.namedWindow('frame', cv2.WINDOW_AUTOSIZE)
-    cv2.setMouseCallback('frame',mouse)
+    times = [0.] * 10
 
     while True:
-        # input run-time to data array
-        time_since_start = int(time.time_ns() / 1000000) - start_time
+        times.append(time.time())
+        times = times[-10:]
+        tickrate = 1 / np.mean(np.diff(times))
 
-        data["motors"][0] = cv2.getTrackbarPos('motor 1', 'sliders')
-        data["motors"][1] = cv2.getTrackbarPos('motor 2', 'sliders')
+        # data["motors"][0] = cv2.getTrackbarPos('motor1', 'sliders')
+        # data["motors"][1] = cv2.getTrackbarPos('motor2', 'sliders')
 
         # get/send arduino data from
-        arduino_stream.set_data(json.dumps(data))
-        arduinodata = arduino_stream.get_data()
-
+        arduino_stream.data = json.dumps(data)
+        arduinodata = arduino_stream.data
         # get video data from stream
+        # todo figure out how to multiprocess the resource-intensive bits
         frame = video_stream.frame
+
         frame = undistort(frame, balance=0.5)
         frame = square(frame)
+
         dictionary = {}
-        frame = visualise(frame, dictionary)
+        frame = analyse(frame, dictionary, visualise=True)
+
         a = 0
         if robot_aruco_id in dictionary.keys():
             position, heading = dictionary[robot_aruco_id]
-            a = just_angle(position, heading, np.int32([mX,mY]))
+            a = just_angle(position, heading, np.int32([mX, mY]))
             v = [mX, mY] - position
             h = position + np.int32(50 * v / np.linalg.norm(v))
             cv2.line(frame, position, h, (255, 0, 0), 2)
 
-        overlay = frame.copy()
-        output = frame.copy()
-
         # draw info bar and fps
-        cv2.rectangle(overlay, (0, 0), (220, 130), (50, 50, 50), -1)
-        cv2.putText(img=overlay, text=f'RATES:',
-                    org=(20, 30),
-                    fontFace=cv2.FONT_HERSHEY_TRIPLEX, fontScale=0.5, color=(255, 255, 255), thickness=1)
-        cv2.putText(img=overlay, text=f'    VIDEO: {video_stream.get_rate():.1f} fps',
-                    org=(20, 50),
-                    fontFace=cv2.FONT_HERSHEY_TRIPLEX, fontScale=0.5, color=(255, 255, 255), thickness=1)
-        cv2.putText(img=overlay, text=f'    ARDUINO: {arduino_stream.get_rate():.1f} Hz',
-                    org=(20, 70),
-                    fontFace=cv2.FONT_HERSHEY_TRIPLEX, fontScale=0.5, color=(255, 255, 255), thickness=1)
-        cv2.putText(img=overlay, text=f'DATA:',
-                    org=(20, 90),
-                    fontFace=cv2.FONT_HERSHEY_TRIPLEX, fontScale=0.5, color=(255, 255, 255), thickness=1)
-        cv2.putText(img=overlay, text=f'    angle: {a:.1f} deg',
-                    org=(20, 110),
-                    fontFace=cv2.FONT_HERSHEY_TRIPLEX, fontScale=0.5, color=(255, 255, 255), thickness=1)
-        cv2.addWeighted(overlay, 0.8, frame, 0.2, 0, output)
 
         # output to frame
-        cv2.imshow('frame', output)
-
+        cv2.imshow('frame', frame)
         # press q key to exit
-        k = cv2.waitKey(1)
-        if k & 0xFF == ord('q'):
-            break
-        # spacebar to capture a screenshot
-        elif k & 0xFF == ord(' '):
-            cv2.imwrite(f'screenshots/frame{str(img_count).zfill(5)}.png', output)
-            img_count += 1
-            print(f'image saved to: screenshots/frame{str(img_count).zfill(5)}.png')
 
-        if video_stream.terminated or arduino_stream.terminated:
+        if key_q in keys:
+            listener.join()
             break
+        motorspeed = np.zeros(2)
+
+        if key_w in keys:
+            motorspeed += np.int32([255, 255])
+        if key_a in keys:
+            motorspeed += np.int32([-127, 127])
+        if key_s in keys:
+            motorspeed += np.int32([-255, -255])
+        if key_d in keys:
+            motorspeed += np.int32([127, -127])
+
+        if Key.space in keys:
+            cv2.imwrite(f'screenshots/frame{str(img_count).zfill(5)}.png', frame)
+            img_count += 1
+        if key_f in keys:
+            print(f'fps: {video_stream.get_rate():.1f}')
+        if key_t in keys:
+            print(f'tps: {tickrate:.1f}')
+        if key_p in keys:
+            print(f'ping: {arduino_stream.get_rate():.1f}')
+
+        motorspeed = list(np.clip(motorspeed,-255,255))
+        print(keys, motorspeed)
+        data["motors"] = motorspeed
+
+
 
     # graceful exit
     cv2.destroyAllWindows()
     video_stream.terminate()
     arduino_stream.terminate()
 
-    print('# main thread exit')
-
 
 if __name__ == "__main__":
     data = {
         "time": 0,
-        "motors": [100, 100, 0, 0],
+        "motors": [0, 0],
         "servos": [0, 0],
         "LEDs": [0, 0, 0, 0]
     }

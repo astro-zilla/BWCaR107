@@ -4,7 +4,7 @@ from Daedalus.utils.streaming import VideoStreamHandler
 from Daedalus.utils.Image import undistort, square
 from Daedalus.utils.colour_tracker import thinning_algorithm
 from Daedalus.utils.navigation import angle_finder, get_main_contours, get_centroid
-from Daedalus.utils.aruco import visualise
+from Daedalus.utils.aruco import analyse
 
 
 def main():
@@ -76,7 +76,7 @@ def main():
             position_blue = np.asarray(get_centroid(im, contours))
             # get direction
             position_heading = {}
-            visualise(frame, position_heading)
+            analyse(frame, position_heading)
             array_1 = position_heading.get(2)
             if array_1 != None:
                 robot_position = array_1[0]
@@ -100,7 +100,7 @@ def main():
             position_red = np.asarray(get_centroid(im1, contours1))
             # get direction
             position_heading1 = {}
-            visualise(frame, position_heading1)
+            analyse(frame, position_heading1)
             array1 = position_heading1.get(2)
             if array1 != None:
                 robot_position = array1[0]

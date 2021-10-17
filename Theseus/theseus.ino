@@ -54,15 +54,11 @@ void setup() {
         while (1);
     }
 
-    motor1->setSpeed(0);
-    motor2->setSpeed(0);
-    motor3->setSpeed(0);
-    motor4->setSpeed(0);
+    motor_L->setSpeed(0);
+    motor_R->setSpeed(0);
 
-    motor1->run(FORWARD);
-    motor2->run(FORWARD);
-    motor3->run(FORWARD);
-    motor4->run(FORWARD);
+    motor_L->run(RELEASE);
+    motor_R->run(RELEASE);
 
     // check for the WiFi module: ###REMOVE BEFORE FIRE###
     if (WiFi.status() == WL_NO_MODULE) {
@@ -114,10 +110,21 @@ void loop() {
 
     time = daedalus["time"];
 
-    motor1->setSpeed(daedalus["motors"][0]);
-    motor2->setSpeed(daedalus["motors"][1]);
-    motor3->setSpeed(daedalus["motors"][2]);
-    motor4->setSpeed(daedalus["motors"][3]);
+    int L = daedalus["motors"][0];
+    int R = daedalus["motors"][1]
+
+    //use bit manipulation here for better code
+    motor_L->setSpeed(abs(L));
+    motor_R->setSpeed(abs(R));
+    if L>0:
+        motor_R->run(FORWARD);
+    else if L<0:
+        motor_R->run(BACKWARD);
+    motor_L->setSpeed(abs(R));
+    if L>0:
+        motor_L->run(FORWARD);
+    else if L<0:
+        motor_L->run(BACKWARD);
 
     // create JSON object for sensor data
     DynamicJsonDocument theseus(256);
