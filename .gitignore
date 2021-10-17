@@ -131,3 +131,4 @@ dmypy.json
 # PyCharm
 .idea/
 tunnel.bat
+Theseus/z_secrets.h
