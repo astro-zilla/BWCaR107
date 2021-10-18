@@ -40,7 +40,7 @@ def on_release(key):
         return False
 
 
-def main():
+def main(robot_aruco_id=7):
     # broadcast locally on 53282
     host = socket.gethostname()
     port = 53282
@@ -63,11 +63,6 @@ def main():
 
     start_time = int(time.time_ns() / 1000000)
     img_count = 0
-    robot_aruco_id = 2
-
-    # cv2.namedWindow('sliders', cv2.WINDOW_NORMAL)
-    # cv2.createTrackbar('motor1', 'sliders', 0, 255, nothing)
-    # cv2.createTrackbar('motor2', 'sliders', 0, 255, nothing)
 
     times = [0.] * 10
 
@@ -84,14 +79,14 @@ def main():
         arduinodata = arduino_stream.data
         # get video data from stream
         # todo figure out how to multiprocess the resource-intensive bits
-        frame = video_stream.frame
+        frame1 = video_stream.frame
 
-        frame = undistort(frame, balance=0.5)
+        frame = undistort(frame1, balance=0.5)
         frame = square(frame)
 
         dictionary = {}
         frame = analyse(frame, dictionary, visualise=True)
-
+        print(dictionary)
         a = 0
         if robot_aruco_id in dictionary.keys():
             position, heading = dictionary[robot_aruco_id]
@@ -100,12 +95,7 @@ def main():
             h = position + np.int32(50 * v / np.linalg.norm(v))
             cv2.line(frame, position, h, (255, 0, 0), 2)
 
-        # draw info bar and fps
-
-        # output to frame
-        cv2.imshow('frame', frame)
         # press q key to exit
-
         if key_q in keys:
             listener.join()
             break
@@ -131,9 +121,11 @@ def main():
             print(f'ping: {arduino_stream.get_rate():.1f}')
 
         motorspeed = list(np.clip(motorspeed,-255,255))
-        print(keys, motorspeed)
         data["motors"] = motorspeed
 
+        # output to frame
+        cv2.imshow('frame', frame)
+        cv2.waitKey(1)
 
 
     # graceful exit
