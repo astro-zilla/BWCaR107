@@ -56,6 +56,5 @@ def just_angle(img, position, heading, target):
         rads -= 2 * np.pi
     elif rads <= -np.pi:
         rads += 2 * np.pi
-    cv2.putText(img, f'angle: {(rads*180)/np.pi}', (50, 50), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 0, 0), 2,
-                cv2.LINE_AA)
-    return (rads * 180) / np.pi
+    angle_degrees = (rads * 180) / np.pi
+    return angle_degrees

@@ -77,16 +77,18 @@ def main():
             # get direction
             position_heading = {}
             analyse(frame, position_heading)
-            array_1 = position_heading.get(2)
+            array_1 = position_heading.get(7)
             if array_1 != None:
                 robot_position = array_1[0]
                 header = array_1[1]
-                angle_blue = angle_finder(im, robot_position, position_blue, header)
+                angle_blue = just_angle(im, robot_position, header, position_blue)
+                cv2.putText(im, f'angle: {angle_blue}', (50, 50), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 0, 0), 2,
+                            cv2.LINE_AA)
                 if 10 < angle_blue <= 180:
                     print("Turn Right.")
-                elif 180 < angle_blue < 350:
+                elif -180 < angle_blue < -10:
                     print("Turn Left.")
-                elif angle_blue <= 10 or angle_blue >= 360:
+                elif angle_blue <= 10 and angle_blue >= -10:
                     print("Go straight")
 
         # find centroid of the red square for direction
@@ -107,6 +109,8 @@ def main():
                 robot_position = array1[0]
                 header1 = array1[1]
                 angle_red = just_angle(im1, robot_position, header1, position_red)
+                cv2.putText(im, f'angle: {angle_red}', (50, 50), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 0, 0), 2,
+                            cv2.LINE_AA)
                 if 10 < angle_red <= 180:
                     print("Turn Right.")
                 elif -180 < angle_red < -10:
