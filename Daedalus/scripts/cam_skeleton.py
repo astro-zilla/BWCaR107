@@ -6,26 +6,14 @@ from Daedalus.utils.aruco import analyse
 from Daedalus.utils.navigation import just_angle
 from Daedalus.utils.streaming import VideoStreamHandler
 
-mX, mY = 0, 0
-
-
-def nothing(_): pass
-
-
-def mouse(event, x, y, flags, params):
-    global mX, mY
-    mX, mY = x, y
-
 
 def main(robot_aruco_id=2):
-    video_stream = VideoStreamHandler("http://localhost:8080/stream.mjpeg")
+    video_stream = VideoStreamHandler("http://localhost:8081/stream/video.mjpeg")
     video_stream.start()
-    data = {}
-    cv2.namedWindow('frame', cv2.WINDOW_AUTOSIZE)
-    cv2.setMouseCallback('frame', mouse)
 
     while True:
         frame = video_stream.frame
+        """
         frame = undistort(frame, balance=0.5)
         frame = square(frame)
         dictionary = {}
@@ -40,7 +28,7 @@ def main(robot_aruco_id=2):
 
         for id in data:
             print(f'{id}:{data[id]}')
-
+        """
         cv2.imshow('frame', frame)
 
         k = cv2.waitKey(20)

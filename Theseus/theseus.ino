@@ -11,9 +11,7 @@ char identity[] = SECRET_IDENTITY;
 
 int keyIndex = 0;                       // your network key index number (needed only for WEP)
 
-// dell-g5 over Orang
-//IPAddress server(10,248,151,172);
-IPAddress server(10,9,42,235);
+IPAddress server(10,248,154,50);
 int port = 53282;
 
 // wifi setup
@@ -34,10 +32,8 @@ volatile byte state = LOW;
 
 // motor stuff
 Adafruit_MotorShield AFMS = Adafruit_MotorShield();
-Adafruit_DCMotor *motor1 = AFMS.getMotor(1);
-Adafruit_DCMotor *motor2 = AFMS.getMotor(2);
-Adafruit_DCMotor *motor3 = AFMS.getMotor(3);
-Adafruit_DCMotor *motor4 = AFMS.getMotor(4);
+Adafruit_DCMotor *motor_L = AFMS.getMotor(3);
+Adafruit_DCMotor *motor_R = AFMS.getMotor(4);
 
 void setup() {
 
@@ -45,7 +41,7 @@ void setup() {
     attachInterrupt(digitalPinToInterrupt(interruptPin), reconnect, FALLING);
 
     Serial.begin(9600);     //Initialize serial and wait for port to open: ###REMOVE BEFORE FIRE###
-    while (!Serial) {}      // wait for serial port to connect. Needed for native USB port only
+
     Serial.println("initialising...");
 
     // check for motor shield
@@ -111,20 +107,23 @@ void loop() {
     time = daedalus["time"];
 
     int L = daedalus["motors"][0];
-    int R = daedalus["motors"][1]
+    int R = daedalus["motors"][1];
 
     //use bit manipulation here for better code
     motor_L->setSpeed(abs(L));
     motor_R->setSpeed(abs(R));
-    if L>0:
+    if (R>0) {
         motor_R->run(FORWARD);
-    else if L<0:
+    }
+    else if (R<0) {
         motor_R->run(BACKWARD);
-    motor_L->setSpeed(abs(R));
-    if L>0:
+    }
+    if (L>0) {
         motor_L->run(FORWARD);
-    else if L<0:
+    }
+    else if (L<0) {
         motor_L->run(BACKWARD);
+    }
 
     // create JSON object for sensor data
     DynamicJsonDocument theseus(256);
