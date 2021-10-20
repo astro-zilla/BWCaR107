@@ -7,13 +7,13 @@ def main():
         data = f.readlines()
     data = [float(item.strip('\n')) for item in data]
 
-
+    for d in data:
+        print(Smoother.process(d))
 
 
 
 if __name__ == "__main__":
     main()
 
-    for d in data:
-        print Smoother.process(d)
+
 
