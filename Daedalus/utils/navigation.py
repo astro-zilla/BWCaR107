@@ -45,20 +45,20 @@ def angle_finder(img, robot_position, destination, heading):
     angle_radians = np.arccos((np.dot(path_vector, heading)) / (path_magnitude * heading_magnitude))
     angle_degrees = (angle_radians * 180) / np.pi
     cv2.line(img, robot_position, destination, (255, 0, 0), 9)
-    cv2.line(img, robot_position, robot_position+3*heading, (255, 0, 0), 9)
     cv2.putText(img, f'angle: {angle_degrees}', (50, 50), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 0, 0), 2,
                 cv2.LINE_AA)
 
     return angle_degrees
 
 
-def just_angle(position, heading, target):
+def just_angle(img, position, heading, target):
     to_target = target - position
     rads = np.arctan2(to_target[1], to_target[0]) - np.arctan2(heading[1], heading[0])
     if rads > np.pi:
         rads -= 2 * np.pi
     elif rads <= -np.pi:
         rads += 2 * np.pi
+
     return (rads * 180) / np.pi
 
 @dataclass
@@ -66,4 +66,3 @@ class PID_consts:
     p: float
     i: float
     d: float
-

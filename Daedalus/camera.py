@@ -3,7 +3,7 @@ import numpy as np
 from Daedalus.utils.streaming import VideoStreamHandler
 from Daedalus.utils.Image import undistort, square
 from Daedalus.utils.colour_tracker import thinning_algorithm
-from Daedalus.utils.navigation import angle_finder, get_main_contours, get_centroid
+from Daedalus.utils.navigation import angle_finder, get_main_contours, get_centroid, just_angle
 from Daedalus.utils.aruco import analyse
 
 
@@ -56,14 +56,14 @@ def main():
 
         stacked_results = np.concatenate((frame, img_results_blocks), axis=1)
         stacked_results1 = np.concatenate((img_results_rsquare, img_results_bsquare), axis=1)
-        cv2.imshow("frame and blocks", stacked_results)
-        cv2.imshow("squares", stacked_results1)
+        #cv2.imshow("frame and blocks", stacked_results)
+        #cv2.imshow("squares", stacked_results1)
 
         # get a thinner version to create a path or reduce image noise
         thin = thinning_algorithm(mask_line_copy)
 
         stacked_results2 = np.concatenate((mask_line, thin), axis=1)
-        cv2.imshow("lines", stacked_results2)
+        #cv2.imshow("lines", stacked_results2)
 
         # find centroid of big square for direction
         im = np.zeros(mask_bsquare.shape, "uint8")
@@ -77,16 +77,18 @@ def main():
             # get direction
             position_heading = {}
             analyse(frame, position_heading)
-            array_1 = position_heading.get(2)
+            array_1 = position_heading.get(7)
             if array_1 != None:
                 robot_position = array_1[0]
                 header = array_1[1]
-                angle_blue = angle_finder(im, robot_position, position_blue, header)
+                angle_blue = just_angle(im, robot_position, header, position_blue)
+                cv2.putText(im, f'angle: {angle_blue}', (50, 50), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 0, 0), 2,
+                            cv2.LINE_AA)
                 if 10 < angle_blue <= 180:
                     print("Turn Right.")
-                elif 180 < angle_blue < 350:
+                elif -180 < angle_blue < -10:
                     print("Turn Left.")
-                elif angle_blue <= 10 or angle_blue >= 360:
+                elif angle_blue <= 10 and angle_blue >= -10:
                     print("Go straight")
 
         # find centroid of the red square for direction
@@ -101,16 +103,19 @@ def main():
             # get direction
             position_heading1 = {}
             analyse(frame, position_heading1)
-            array1 = position_heading1.get(2)
+            array1 = position_heading1.get(7)
+            print(position_heading1)
             if array1 != None:
                 robot_position = array1[0]
                 header1 = array1[1]
-                angle_red = angle_finder(im1, robot_position, position_red, header1)
+                angle_red = just_angle(im1, robot_position, header1, position_red)
+                cv2.putText(im, f'angle: {angle_red}', (50, 50), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 0, 0), 2,
+                            cv2.LINE_AA)
                 if 10 < angle_red <= 180:
                     print("Turn Right.")
-                elif 180 < angle_red < 350:
+                elif -180 < angle_red < -10:
                     print("Turn Left.")
-                elif angle_red <= 10 or angle_red >= 360:
+                elif angle_red <= 10 and angle_red >= -10:
                     print("Go straight")
             pass
 
