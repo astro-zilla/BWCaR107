@@ -1,0 +1,26 @@
+// from daedalus to theseus: old
+{
+  "motors": [
+    0,
+    0
+  ],
+  "servos": [
+    0,
+    0
+  ],
+  "LEDS": [
+    0,
+    0,
+    0,
+    0
+  ]
+}
+
+{
+  "ultrasonic0": 0,
+  "ultrasonic1": 0,
+  "IR0": 0,
+  "IR1": 0,
+  "IR2": 0,
+  "IR3": 0
+}

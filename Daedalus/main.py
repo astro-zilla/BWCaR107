@@ -1,17 +1,18 @@
 import json
 import socket
+import sys
 import time
 
 import cv2
 import numpy as np
-from pynput.keyboard import Key, KeyCode, Listener
+from pynput.keyboard import KeyCode, Listener
 
 from Daedalus.utils.Image import square, undistort
 from Daedalus.utils.aruco import analyse
-from Daedalus.utils.navigation import just_angle
+from Daedalus.utils.navigation import PID_consts, just_angle
 from Daedalus.utils.streaming import ArduinoStreamHandler, VideoStreamHandler
 
-mX, mY = 0, 0
+mouse_pos = np.int32([0, 0])
 keys = set()
 
 key_q = KeyCode.from_char('q')
@@ -21,9 +22,13 @@ key_a = KeyCode.from_char('a')
 key_s = KeyCode.from_char('s')
 key_d = KeyCode.from_char('d')
 
+key_r = KeyCode.from_char('r')
 key_f = KeyCode.from_char('f')
-key_t = KeyCode.from_char('t')
-key_p = KeyCode.from_char('p')
+
+
+def mouse(event, x, y, flags, params):
+    global mouse_pos
+    mouse_pos = np.int32([x, y])
 
 
 def nothing(_): pass
@@ -53,7 +58,8 @@ def main(robot_aruco_id=7):
 
     # init asynchronous "threading" stream handlers
     video_stream = VideoStreamHandler("http://localhost:8081/stream/video.mjpeg")
-    arduino_stream = ArduinoStreamHandler(server, json.dumps(data))
+    arduino_stream = ArduinoStreamHandler(server)
+    arduino_stream.write(bytes(json.dumps(data), 'utf-8'))
     listener = Listener(on_press=on_press, on_release=on_release)
     listener.start()
 
@@ -61,22 +67,24 @@ def main(robot_aruco_id=7):
     video_stream.start()
     arduino_stream.start()
 
-    start_time = int(time.time_ns() / 1000000)
-    img_count = 0
-
+    # times for mainloop tickrate
     times = [0.] * 10
+
+    # mouse callback in main window
+    cv2.namedWindow('frame')
+    cv2.setMouseCallback('frame', mouse)
+
+    # control params
+    K_rot = PID_consts(1, 0, 0)
 
     while True:
         times.append(time.time())
         times = times[-10:]
         tickrate = 1 / np.mean(np.diff(times))
 
-        # data["motors"][0] = cv2.getTrackbarPos('motor1', 'sliders')
-        # data["motors"][1] = cv2.getTrackbarPos('motor2', 'sliders')
-
         # get/send arduino data from
-        arduino_stream.data = json.dumps(data)
-        arduinodata = arduino_stream.data
+        arduino_stream.write(data)
+        arduinodata = arduino_stream.read()
         # get video data from stream
         # todo figure out how to multiprocess the resource-intensive bits
         frame1 = video_stream.frame
@@ -86,12 +94,13 @@ def main(robot_aruco_id=7):
 
         dictionary = {}
         frame = analyse(frame, dictionary, visualise=True)
-        print(dictionary)
-        a = 0
-        if robot_aruco_id in dictionary.keys():
-            position, heading = dictionary[robot_aruco_id]
-            a = just_angle(position, heading, np.int32([mX, mY]))
-            v = [mX, mY] - position
+        ang = 0
+        if robot_aruco_id in dictionary.keys() or 1:
+            # position, heading = dictionary[robot_aruco_id]
+            position = [300, 300]
+            heading = [1, 0]
+            ang = just_angle(position, heading, mouse_pos)
+            v = mouse_pos - position
             h = position + np.int32(50 * v / np.linalg.norm(v))
             cv2.line(frame, position, h, (255, 0, 0), 2)
 
@@ -110,23 +119,23 @@ def main(robot_aruco_id=7):
         if key_d in keys:
             motorspeed += np.int32([127, -127])
 
-        if Key.space in keys:
-            cv2.imwrite(f'screenshots/frame{str(img_count).zfill(5)}.png', frame)
-            img_count += 1
+        if key_r in keys:
+            data["servos"][0] = 90
         if key_f in keys:
-            print(f'fps: {video_stream.get_rate():.1f}')
-        if key_t in keys:
-            print(f'tps: {tickrate:.1f}')
-        if key_p in keys:
-            print(f'ping: {arduino_stream.get_rate():.1f}')
+            data["servos"][0] = 0
 
-        motorspeed = list(np.clip(motorspeed,-255,255))
+        # s = K_rot.p * (255 * ang / 180)
+        # motorspeed = [s, -s]
+        fps, ping = video_stream.get_rate(), arduino_stream.get_rate()
+        sys.stdout.write(f'[fps: {fps:.1f}, tps: {tickrate:.1f}, ping: {ping:.1f}, servos={data["servos"]}\r')
+        sys.stdout.flush()
+
+        motorspeed = list(np.clip(motorspeed, -255, 255))
         data["motors"] = motorspeed
 
         # output to frame
         cv2.imshow('frame', frame)
         cv2.waitKey(1)
-
 
     # graceful exit
     cv2.destroyAllWindows()
