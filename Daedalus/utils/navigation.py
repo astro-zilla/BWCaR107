@@ -1,3 +1,5 @@
+from dataclasses import dataclass
+
 import cv2
 import numpy as np
 
@@ -56,5 +58,11 @@ def just_angle(img, position, heading, target):
         rads -= 2 * np.pi
     elif rads <= -np.pi:
         rads += 2 * np.pi
-    angle_degrees = (rads * 180) / np.pi
-    return angle_degrees
+
+    return (rads * 180) / np.pi
+
+@dataclass
+class PID_consts:
+    p: float
+    i: float
+    d: float

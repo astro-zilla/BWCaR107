@@ -1,6 +1,7 @@
 #include <WiFiNINA.h>
 #include <ArduinoJson.h>
 #include <Adafruit_MotorShield.h>
+#include <Servo.h>
 
 #include "z_secrets.h"
 
@@ -11,7 +12,7 @@ char identity[] = SECRET_IDENTITY;
 
 int keyIndex = 0;                       // your network key index number (needed only for WEP)
 
-IPAddress server(10,248,154,50);
+IPAddress server(10,248,151,151);
 int port = 53282;
 
 // wifi setup
@@ -21,24 +22,57 @@ byte mac[6]; //84:CC:A8:2B:E1:74 -- m4qjzq6z7adbuqfg
 
 // time for ping calcs
 long time = 0;
-int s1;
-int s2;
-int s3;
-int s4;
 
-// interrupts
-const byte interruptPin = 8;
-volatile byte state = LOW;
+//motor speeds
+int L_speed;
+int R_speed;
+
+// servo angles
+int pincer_ang;
+int arm_ang;
 
 // motor stuff
 Adafruit_MotorShield AFMS = Adafruit_MotorShield();
 Adafruit_DCMotor *motor_L = AFMS.getMotor(3);
 Adafruit_DCMotor *motor_R = AFMS.getMotor(4);
 
-void setup() {
+Servo pincer;
+Servo arm;
 
-    pinMode(interruptPin, INPUT_PULLUP);
-    attachInterrupt(digitalPinToInterrupt(interruptPin), reconnect, FALLING);
+DynamicJsonDocument daedalus(256);
+
+// ###REMOVE BEFORE FIRE###
+void printWifiStatus() {
+    // print the SSID of the network you're attached to:
+    Serial.print("SSID: ");
+    Serial.println(WiFi.SSID());
+
+    // print your board's IP address:
+    IPAddress ip = WiFi.localIP();
+    Serial.print("IP Address: ");
+    Serial.println(ip);
+
+    // print the received signal strength:
+    long rssi = WiFi.RSSI();
+    Serial.print("signal strength (RSSI):");
+    Serial.print(rssi);
+    Serial.println(" dBm");
+}
+
+void test() {
+    Serial.println("TESTING");
+
+}
+
+void reconnect() {
+    Serial.println("retrying connection to server");
+    if (client.connect(server,port)) {
+        Serial.print("connected to: ");
+        Serial.println(server);
+    }
+}
+
+void setup() {
 
     Serial.begin(9600);     //Initialize serial and wait for port to open: ###REMOVE BEFORE FIRE###
 
@@ -55,6 +89,9 @@ void setup() {
 
     motor_L->run(RELEASE);
     motor_R->run(RELEASE);
+
+    pincer.attach(9,730,3350); // pin,min,max (us pulse)
+    arm.attach(10,730,3350);
 
     // check for the WiFi module: ###REMOVE BEFORE FIRE###
     if (WiFi.status() == WL_NO_MODULE) {
@@ -81,7 +118,9 @@ void setup() {
     Serial.println("Connected to WiFi");
     printWifiStatus(); // ###REMOVE BEFORE FIRE###
 
-    //int err = WiFi.hostByName('dell-g5',server);
+    //int err = WiFi.hostByName('dell-g5.eduroam.jc',server);
+    //if ( err == 1 ){ err = WiFi.hostByName('dell-g5.wireless.private.cam.ac.uk',server); }
+    //if ( err == 1 ){ Serial.println("Error resolving name"); }
     Serial.print("Attempting to connect to IP: ");
     Serial.println(server);
     if (client.connect(server,port)) {
@@ -96,34 +135,47 @@ void loop() {
     // TIMER IE DOES NOT WORK --- 2:30AM ELLIS SAYS USE AN EXTERNAL RC CIRCUIT OR 555 TIMER AS AN EXTERNAL IE
 
     // deserialise JSON data over WiFi from Daedalus on controller
-    DynamicJsonDocument daedalus(256);
-    DeserializationError error = deserializeJson(daedalus, client);
-    if (error)
-        return;
+    while (client.available()) {
 
-    serializeJson(daedalus,Serial);
-    Serial.print("\n");
+        DeserializationError error = deserializeJson(daedalus, client);
+        if (error){
+            Serial.print("DeserializationError");
+        }
+        Serial.println("client");
+    }
+    Serial.println("loop");
+
 
     time = daedalus["time"];
 
-    int L = daedalus["motors"][0];
-    int R = daedalus["motors"][1];
+    L_speed = daedalus["motors"][0];
+    R_speed = daedalus["motors"][1];
+    pincer_ang = daedalus["servos"][0];
+    arm_ang = daedalus["servos"][1];
+
+    pincer.write(pincer_ang); // only steps of 1 deg
+    arm.write(arm_ang);
+
+    Serial.println(pincer.read());
 
     //use bit manipulation here for better code
-    motor_L->setSpeed(abs(L));
-    motor_R->setSpeed(abs(R));
-    if (R>0) {
+    motor_L->setSpeed(abs(L_speed));
+    motor_R->setSpeed(abs(R_speed));
+    if (R_speed>0) {
         motor_R->run(FORWARD);
     }
-    else if (R<0) {
+    else if (R_speed<0) {
         motor_R->run(BACKWARD);
     }
-    if (L>0) {
+    if (L_speed>0) {
         motor_L->run(FORWARD);
     }
-    else if (L<0) {
+    else if (L_speed<0) {
         motor_L->run(BACKWARD);
     }
+
+
+
 
     // create JSON object for sensor data
     DynamicJsonDocument theseus(256);
@@ -146,32 +198,3 @@ void loop() {
     }
 }
 
-// ###REMOVE BEFORE FIRE###
-void printWifiStatus() {
-    // print the SSID of the network you're attached to:
-    Serial.print("SSID: ");
-    Serial.println(WiFi.SSID());
-
-    // print your board's IP address:
-    IPAddress ip = WiFi.localIP();
-    Serial.print("IP Address: ");
-    Serial.println(ip);
-
-    // print the received signal strength:
-    long rssi = WiFi.RSSI();
-    Serial.print("signal strength (RSSI):");
-    Serial.print(rssi);
-    Serial.println(" dBm");
-}
-
-void test() {
-    Serial.println("TESTING");
-}
-
-void reconnect() {
-    Serial.println("retrying connection to server");
-    if (client.connect(server,port)) {
-        Serial.print("connected to: ");
-        Serial.println(server);
-    }
-}
