@@ -156,8 +156,6 @@ void loop() {
     pincer.write(pincer_ang); // only steps of 1 deg
     arm.write(arm_ang);
 
-    Serial.println(pincer.read());
-
     //use bit manipulation here for better code
     motor_L->setSpeed(abs(L_speed));
     motor_R->setSpeed(abs(R_speed));

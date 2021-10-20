@@ -47,7 +47,7 @@ class ArduinoStreamHandler(Thread):
 
             # it's ok for this to block because the arduino can't handle more writes than reads to it
             self.in_data = json.loads(self.file.readline())
-
+            print(time.time(),self.in_data["time"])
             self.times.append(time.time()-self.in_data["time"])
             self.times = self.times[-50:]
 

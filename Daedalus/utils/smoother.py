@@ -1,5 +1,5 @@
 
-class smoother:
+class Smoother:
     def __init__(self, windowlen):
         self.windowlen = windowlen
         self.data = []
