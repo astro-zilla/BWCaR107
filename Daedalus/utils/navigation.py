@@ -1,9 +1,11 @@
+from dataclasses import dataclass
+
 import cv2
 import numpy as np
 
 
 # stores all the contours that have an area bigger/smaller than size
-def get_main_contours(img, lower_size=0, upper_size=1000000 ):
+def get_main_contours(img, lower_size=0, upper_size=1000000):
     if len(img.shape) > 2:
         cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
 
@@ -49,12 +51,19 @@ def angle_finder(img, robot_position, destination, heading):
     return angle_degrees
 
 
-def just_angle(img, position, heading, target):
+def just_angle(position, heading, target):
     to_target = target - position
     rads = np.arctan2(to_target[1], to_target[0]) - np.arctan2(heading[1], heading[0])
     if rads > np.pi:
         rads -= 2 * np.pi
     elif rads <= -np.pi:
         rads += 2 * np.pi
-    angle_degrees = (rads * 180) / np.pi
-    return angle_degrees
+
+    return (rads * 180) / np.pi
+
+
+@dataclass
+class PID_consts:
+    p: float
+    i: float
+    d: float

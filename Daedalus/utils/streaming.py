@@ -1,3 +1,4 @@
+import json
 import socket
 import time
 from socket import error as socketError
@@ -8,24 +9,25 @@ import numpy as np
 
 
 class ArduinoStreamHandler(Thread):
-    def __init__(self, server: socket.socket, data: str):
+    def __init__(self, server: socket.socket):
         super().__init__()
         self.server = server
         self.client = None
+        self.file = None
 
-        self.out_data = '{"NULL":"NULL"}'
-        self.in_data = ''
-
-        self.writer = None
-        self.reader = None
+        self.out_data = {}
+        self.in_data = {}
 
         self.terminated = Event()
-        self.times = [0.] * 20
+        self.out = Event()
+
+        self.times = [0.] * 50
 
     def connect(self):
         try:
             print(f'# listening for connection from Arduino')
             self.client, addr = self.server.accept()
+            self.file = self.client.makefile()
             print(f'# recieved connection from arduino: {addr[0]}:{addr[1]}')
             return True
         except socketError:
@@ -36,45 +38,33 @@ class ArduinoStreamHandler(Thread):
             self.connect()
             if self.terminated.is_set():
                 return
-        self.writer = StreamWriter(self.client, bytes(self.out_data, 'utf-8'))
-        self.reader = StreamReader(self.client)
 
-        self.writer.start()
-        self.reader.start()
         while not self.terminated.is_set():
-            self.writer.ready.set()
-            self.reader.ready.set()
-            self.reader.ready.wait(1)
-            self.times.append(time.time())
-            self.times = self.times[-20:]
+            # if self.out.is_set():
+            self.out_data["time"] = time.time()
+            self.client.send(bytes(json.dumps(self.out_data),'utf-8'))
+            # self.out.clear()
+
+            # it's ok for this to block because the arduino can't handle more writes than reads to it
+            self.in_data = json.loads(self.file.readline())
+            print(time.time(),self.in_data["time"])
+            self.times.append(time.time()-self.in_data["time"])
+            self.times = self.times[-50:]
 
     def get_rate(self):
-        return np.mean(np.diff(self.times))
+        return np.mean(self.times)
 
-    @property
-    def data(self):
-        if self.reader:
-            return self.reader.data
-        else:
-            return self.in_data
+    def read(self):
+        return self.in_data
 
-    @data.setter
-    def data(self, data):
-        if self.writer:
-            self.writer.data = bytes(data, 'utf-8')
-        else:
-            self.out_data = data
+    def write(self, data):
+        self.out_data = data
+        self.out.set()
 
     def terminate(self):
         self.terminated.set()
         if self.client:
             self.client.close()
-            if self.writer:
-                self.writer.ready.set()
-                self.writer.terminated.set()
-            if self.reader:
-                self.reader.ready.set()
-                self.reader.terminated.set()
 
         self.server.close()
         print('# arduino connection successfully terminated')
@@ -128,13 +118,12 @@ class VideoStreamHandler(Thread):
     def connect(self):
         print('# connecting to camera')
         self.cap = cv2.VideoCapture(self.source)
-        #self.width = int(self.cap.get(cv2.CAP_PROP_FRAME_WIDTH))
-        #self.height = int(self.cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+        # self.width = int(self.cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+        # self.height = int(self.cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
         print('# camera datastream initiated')
 
     def run(self):
         while not self.terminated:
-
 
             if self.cap is None:
                 self.connect()
