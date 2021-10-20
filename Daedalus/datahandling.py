@@ -8,12 +8,7 @@ def main():
     data = [float(item.strip('\n')) for item in data]
 
     for d in data:
-        print(Smoother.process(d))
-
-
+        print(Smoother.process(smoother,d))
 
 if __name__ == "__main__":
     main()
-
-
-
