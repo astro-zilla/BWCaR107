@@ -62,6 +62,16 @@ def just_angle(position, heading, target):
     return (rads * 180) / np.pi
 
 
+def sigmoid(x, max, offset=0):
+    x = 2 * (max - offset) / (1 + np.exp(0.01 * x)) - (max - offset)
+    x += np.sign(x) * offset
+    return x
+
+
+def offset(x, offset):
+    return x + np.sign(x) * offset
+
+
 @dataclass
 class PID_consts:
     p: float

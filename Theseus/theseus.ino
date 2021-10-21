@@ -12,7 +12,7 @@ char identity[] = SECRET_IDENTITY;
 
 int keyIndex = 0;                       // your network key index number (needed only for WEP)
 
-IPAddress server(10,248,151,151);
+IPAddress server(10,248,131,236);
 int port = 53282;
 
 // wifi setup
@@ -141,9 +141,7 @@ void loop() {
         if (error){
             Serial.print("DeserializationError");
         }
-        Serial.println("client");
     }
-    Serial.println("loop");
 
 
     time = daedalus["time"];

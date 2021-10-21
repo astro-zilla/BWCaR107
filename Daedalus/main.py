@@ -9,7 +9,7 @@ from pynput.keyboard import KeyCode, Listener
 
 from Daedalus.utils.Image import square, undistort
 from Daedalus.utils.aruco import analyse
-from Daedalus.utils.navigation import PID_consts, just_angle
+from Daedalus.utils.navigation import PID_consts, just_angle, offset, sigmoid
 from Daedalus.utils.streaming import ArduinoStreamHandler, VideoStreamHandler
 
 mouse_pos = np.int32([0, 0])
@@ -28,7 +28,8 @@ key_f = KeyCode.from_char('f')
 
 def mouse(event, x, y, flags, params):
     global mouse_pos
-    mouse_pos = np.int32([x, y])
+    if event == cv2.EVENT_LBUTTONDOWN:
+        mouse_pos = np.int32([x, y])
 
 
 def nothing(_): pass
@@ -75,7 +76,7 @@ def main(robot_aruco_id=7):
     cv2.setMouseCallback('frame', mouse)
 
     # control params
-    K_rot = PID_consts(1, 0, 0)
+    K_rot = PID_consts(1.5, 0, 0)
 
     while True:
         times.append(time.time())
@@ -95,39 +96,52 @@ def main(robot_aruco_id=7):
         dictionary = {}
         frame = analyse(frame, dictionary, visualise=True)
         ang = 0
-        if robot_aruco_id in dictionary.keys() or 1:
-            # position, heading = dictionary[robot_aruco_id]
-            position = [300, 300]
-            heading = [1, 0]
+        dist = 0
+        if robot_aruco_id in dictionary.keys():
+            position, heading = dictionary[robot_aruco_id]
+
             ang = just_angle(position, heading, mouse_pos)
-            v = mouse_pos - position
-            h = position + np.int32(50 * v / np.linalg.norm(v))
-            cv2.line(frame, position, h, (255, 0, 0), 2)
+            dist = np.linalg.norm(mouse_pos - position)
+
+            cv2.line(frame, position, mouse_pos, (255, 0, 0), 1)
+            cv2.circle(frame, mouse_pos, 3, (0, 0, 255))
 
         # press q key to exit
         if key_q in keys:
             listener.join()
+            data["motors"] = [0,0]
+            arduino_stream.write(data)
             break
         motorspeed = np.zeros(2)
 
-        if key_w in keys:
-            motorspeed += np.int32([255, 255])
-        if key_a in keys:
-            motorspeed += np.int32([-127, 127])
-        if key_s in keys:
-            motorspeed += np.int32([-255, -255])
-        if key_d in keys:
-            motorspeed += np.int32([127, -127])
+        # if key_w in keys:
+        #     motorspeed += np.int32([255, 255])
+        # if key_a in keys:
+        #     motorspeed += np.int32([-255, 255])
+        # if key_s in keys:
+        #     motorspeed += np.int32([-255, -255])
+        # if key_d in keys:
+        #     motorspeed += np.int32([255, -255])
 
         if key_r in keys:
             data["servos"][0] = 90
         if key_f in keys:
             data["servos"][0] = 0
 
-        # s = K_rot.p * (255 * ang / 180)
-        # motorspeed = [s, -s]
+        err = ang
+        s = K_rot.p * err
+        d = np.clip(dist/100,0.1,1)
+        if abs(ang)<90:
+            motorspeed=[-d*150*np.cos(ang*np.pi/180)+s,-d*150.0*np.cos(ang*np.pi/180)-s]
+        elif dist<50:
+            motorspeed = [0.0,0.0]
+        else:
+            s = offset(s,50)
+            motorspeed = [s,-s]
+
         fps, ping = video_stream.get_rate(), arduino_stream.get_rate()
-        sys.stdout.write(f'[fps: {fps:.1f}, tps: {tickrate:.1f}, ping: {ping:.1f}, servos={data["servos"]}\r')
+        # sys.stdout.write(f'[fps: {fps:.1f}, tps: {tickrate:.1f}, ping: {ping:.1f}, motors: {data["motors"]}\r')
+        sys.stdout.write(f'ang: {ang:.1f}, dist: {dist:.1f}, s: {s:.1f}\r')
         sys.stdout.flush()
 
         motorspeed = list(np.clip(motorspeed, -255, 255))

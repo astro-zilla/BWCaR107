@@ -41,18 +41,18 @@ class ArduinoStreamHandler(Thread):
 
         while not self.terminated.is_set():
             # if self.out.is_set():
-            self.out_data["time"] = time.time()
-            self.client.send(bytes(json.dumps(self.out_data),'utf-8'))
+            self.out_data["time"] = int(time.time())
+            self.client.send(bytes(json.dumps(self.out_data), 'utf-8'))
             # self.out.clear()
 
             # it's ok for this to block because the arduino can't handle more writes than reads to it
             self.in_data = json.loads(self.file.readline())
-            print(time.time(),self.in_data["time"])
-            self.times.append(time.time()-self.in_data["time"])
+
+            self.times.append(time.time() - self.in_data["time"])
             self.times = self.times[-50:]
 
     def get_rate(self):
-        return np.mean(self.times)
+        return 1000*np.mean(self.times)
 
     def read(self):
         return self.in_data
