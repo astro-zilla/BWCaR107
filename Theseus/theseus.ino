@@ -12,7 +12,7 @@ char identity[] = SECRET_IDENTITY;
 
 int keyIndex = 0;                       // your network key index number (needed only for WEP)
 
-IPAddress server(10,248,131,236);
+IPAddress server(10,9,42,235);
 int port = 53282;
 
 // wifi setup

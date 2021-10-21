@@ -1,3 +1,4 @@
+import curses
 import json
 import socket
 import sys
@@ -7,10 +8,10 @@ import cv2
 import numpy as np
 from pynput.keyboard import KeyCode, Listener
 
-from Daedalus.utils.Image import square, undistort
-from Daedalus.utils.aruco import analyse
-from Daedalus.utils.navigation import PID_consts, just_angle, offset, sigmoid
-from Daedalus.utils.streaming import ArduinoStreamHandler, VideoStreamHandler
+from utils.Image import square, undistort
+from utils.aruco import analyse
+from utils.navigation import PID_consts, just_angle, offset, sigmoid
+from utils.streaming import ArduinoStreamHandler, VideoStreamHandler
 
 mouse_pos = np.int32([0, 0])
 keys = set()
@@ -46,7 +47,7 @@ def on_release(key):
         return False
 
 
-def main(robot_aruco_id=7):
+def main(screen=curses.initscr(), robot_aruco_id=7):
     # broadcast locally on 53282
     host = socket.gethostname()
     port = 53282
@@ -61,12 +62,25 @@ def main(robot_aruco_id=7):
     video_stream = VideoStreamHandler("http://localhost:8081/stream/video.mjpeg")
     arduino_stream = ArduinoStreamHandler(server)
     arduino_stream.write(bytes(json.dumps(data), 'utf-8'))
-    listener = Listener(on_press=on_press, on_release=on_release)
-    listener.start()
 
     # start streams
     video_stream.start()
     arduino_stream.start()
+
+    # curses window
+    # screen = curses.initscr()
+
+    curses.curs_set(False)
+    curses.start_color()
+    curses.use_default_colors()
+    for i in range(0, 255):
+        curses.init_pair(i + 1, i, -1)
+
+    screen.clear()
+
+    # keypress handler
+    listener = Listener(on_press=on_press, on_release=on_release)
+    listener.start()
 
     # times for mainloop tickrate
     times = [0.] * 10
@@ -109,10 +123,15 @@ def main(robot_aruco_id=7):
         # press q key to exit
         if key_q in keys:
             listener.join()
-            data["motors"] = [0,0]
+            data["motors"] = [0, 0]
             arduino_stream.write(data)
             break
         motorspeed = np.zeros(2)
+
+        if key_r in keys:
+            data["servos"][0] += 1
+        if key_f in keys:
+            data["servos"][0] -= 1
 
         # if key_w in keys:
         #     motorspeed += np.int32([255, 255])
@@ -123,26 +142,57 @@ def main(robot_aruco_id=7):
         # if key_d in keys:
         #     motorspeed += np.int32([255, -255])
 
-        if key_r in keys:
-            data["servos"][0] = 90
-        if key_f in keys:
-            data["servos"][0] = 0
-
         err = ang
         s = K_rot.p * err
-        d = np.clip(dist/100,0.1,1)
-        if abs(ang)<90:
-            motorspeed=[-d*150*np.cos(ang*np.pi/180)+s,-d*150.0*np.cos(ang*np.pi/180)-s]
-        elif dist<50:
-            motorspeed = [0.0,0.0]
+        d = np.clip(dist / 100, 0.1, 1)
+        if abs(ang) < 90:
+            motorspeed = [-d * 150 * np.cos(ang * np.pi / 180) + s, -d * 150.0 * np.cos(ang * np.pi / 180) - s]
+        elif dist < 50:
+            motorspeed = [0.0, 0.0]
         else:
-            s = offset(s,50)
-            motorspeed = [s,-s]
+            s = offset(s, 50)
+            motorspeed = [s, -s]
 
         fps, ping = video_stream.get_rate(), arduino_stream.get_rate()
-        # sys.stdout.write(f'[fps: {fps:.1f}, tps: {tickrate:.1f}, ping: {ping:.1f}, motors: {data["motors"]}\r')
-        sys.stdout.write(f'ang: {ang:.1f}, dist: {dist:.1f}, s: {s:.1f}\r')
-        sys.stdout.flush()
+        screen.clear()
+        # arduino data
+        screen.addstr('\nArduino: ', curses.color_pair(16))
+        screen.addstr(f'{arduino_stream.status}\n', curses.color_pair(arduino_stream.status_color))
+        if arduino_stream.status == 'connected':
+
+            screen.addstr(f'\u251c\u2500\u2500')
+            screen.addstr(f'ping: ', curses.color_pair(16))
+            screen.addstr(f'{ping:.1f}\n', curses.color_pair(10))
+
+            screen.addstr(f'\u251c\u2500\u2500')
+            screen.addstr(f'data\n', curses.color_pair(16))
+
+            for i, (k, v) in enumerate(arduinodata.items()):
+                if i < len(arduinodata) - 1:
+                    screen.addstr(f'\u2502  \u251c\u2500\u2500{k}: {v}\n')
+                else:
+                    screen.addstr(f'\u2502  \u2514\u2500\u2500{k}: {v}\n')
+
+            screen.addstr(f'\u2514\u2500\u2500')
+            screen.addstr(f'commands\n', curses.color_pair(16))
+
+            for i, (k, v) in enumerate(data.items()):
+                if i < len(data) - 1:
+                    screen.addstr(f'   \u251c\u2500\u2500{k}: {v}\n')
+                else:
+                    screen.addstr(f'   \u2514\u2500\u2500{k}: {v}\n')
+
+        # video data
+        screen.addstr('Camera:  ', curses.color_pair(16))
+        screen.addstr(f'{video_stream.status}\n', curses.color_pair(video_stream.status_color))
+        if video_stream.status == 'connected':
+            screen.addstr(f'\u2514\u2500fps: ')
+            screen.addstr(f'{fps:.1f}\n', curses.color_pair(10))
+
+        # program data
+        # screen.addstr(f'tps: {tickrate:.1f}\tmotors: {data["motors"]}')
+        # screen.addstr(f'ange: {ang:.1f}\tdistance: {dist:.1f}\tmotor parameter: {s:.1f}')
+        screen.refresh()
 
         motorspeed = list(np.clip(motorspeed, -255, 255))
         data["motors"] = motorspeed
@@ -164,4 +214,5 @@ if __name__ == "__main__":
         "servos": [0, 0],
         "LEDs": [0, 0, 0, 0]
     }
-    main()
+
+    curses.wrapper(main)
