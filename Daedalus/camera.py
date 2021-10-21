@@ -44,10 +44,11 @@ def main():
 
         # display results to see just the effect of the masks
         #cv2.imshow("hsv", imgHSV)
-        #cv2.imshow("mask_line", mask_line)
+        cv2.imshow("mask_line", mask_line)
         #cv2.imshow("mask_block", mask_block)
         #cv2.imshow("mask_rsquare", mask_rsquare)
         #cv2.imshow("mask_bsquare", mask_bsquare)
+        cv2.imshow("frame", frame)
 
         # display results with original colours
         img_results_blocks = cv2.bitwise_and(frame, frame, mask=mask_block)
@@ -62,8 +63,18 @@ def main():
         # get a thinner version to create a path or reduce image noise
         thin = thinning_algorithm(mask_line_copy)
 
+        contours_line, hierarchy_line = cv2.findContours(mask_line, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
+        img1 = np.zeros(mask_line.shape, "uint8")
+        for contour in contours_line:
+            area_l = cv2.contourArea(contour)
+            print(area_l)
+            #if area_l < 100:
+            cv2.drawContours(img1, contour, -1, (255, 255, 255), 3)
+
+
         stacked_results2 = np.concatenate((mask_line, thin), axis=1)
         #cv2.imshow("lines", stacked_results2)
+        cv2.imshow("lien", img1)
 
         # find centroid of big square for direction
         im = np.zeros(mask_bsquare.shape, "uint8")
@@ -104,23 +115,22 @@ def main():
             position_heading1 = {}
             analyse(frame, position_heading1)
             array1 = position_heading1.get(7)
-            print(position_heading1)
             if array1 != None:
                 robot_position = array1[0]
                 header1 = array1[1]
                 angle_red = just_angle(im1, robot_position, header1, position_red)
-                cv2.putText(im, f'angle: {angle_red}', (50, 50), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 0, 0), 2,
-                            cv2.LINE_AA)
-                if 10 < angle_red <= 180:
-                    print("Turn Right.")
-                elif -180 < angle_red < -10:
-                    print("Turn Left.")
-                elif angle_red <= 10 and angle_red >= -10:
-                    print("Go straight")
+                #cv2.putText(im1, f'angle: {angle_red}', (50, 50), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 0, 0), 2,
+                        #cv2.LINE_AA)
+                #if 10 < angle_red <= 180:
+                    #print("Turn Right.")
+                #elif -180 < angle_red < -10:
+                    #print("Turn Left.")
+                #elif angle_red <= 10 and angle_red >= -10:
+                    #print("Go straight")
             pass
 
         im3 = np.zeros(mask_block.shape, "uint8")
-        contours3 = get_main_contours(mask_block, 100, 400)
+        contours3 = get_main_contours(mask_block, 100, 300)
         if len(contours3) == 0:
             pass
         else:
@@ -128,9 +138,10 @@ def main():
 
 
 
-        cv2.imshow("im", im)
-        cv2.imshow("im1", im1)
-        cv2.imshow("IM3", im3)
+
+        #cv2.imshow("im", im)
+        #cv2.imshow("im1", im1)
+        #cv2.imshow("IM3", im3)
 
         if cv2.waitKey(1) & 0xFF == ord('q'):
             break
