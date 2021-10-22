@@ -62,6 +62,27 @@ def just_angle(position, heading, target):
     return (rads * 180) / np.pi
 
 
+def find_block(img):
+
+    # turn the image into HSV for colour detection
+    imgHSV = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
+
+    # values for blocks mask (whether red top or blue top)
+    lower_block = np.array([90, 107, 123])
+    upper_block = np.array([179, 255, 255])
+    mask_block = cv2.inRange(imgHSV, lower_block, upper_block)
+
+    # create matrix to store contours and centroid of the block
+    im = np.zeros(mask_block.shape, "uint8")
+    contours = get_main_contours(mask_block, 100, 300)
+    if len(contours) == 0:
+        pass
+    else:
+        position_block = np.asarray(get_centroid(im, contours))
+
+    return position_block
+
+
 @dataclass
 class PID_consts:
     p: float
