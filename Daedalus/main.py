@@ -9,7 +9,7 @@ from pynput.keyboard import KeyCode, Listener
 
 from daedalus.Image import square, undistort
 from daedalus.aruco import analyse
-from daedalus.navigation import PID_consts, just_angle, offset, sigmoid
+from daedalus.navigation import PID_consts, get_angle, offset
 from daedalus.streaming import ArduinoStreamHandler, VideoStreamHandler
 
 mouse_pos = np.int32([0, 0])
@@ -44,6 +44,45 @@ def on_release(key):
     if key == key_q:
         # Stop listener
         return False
+
+
+def draw_ui(screen_, arduino_stream_, ping_, arduinodata_, video_stream_, fps_):
+    screen_.clear()
+    # arduino data
+    screen_.addstr('\nArduino: ', curses.color_pair(16))
+    screen_.addstr(f'{arduino_stream_.status}\n', curses.color_pair(arduino_stream_.status_color))
+    if arduino_stream_.status == 'connected':
+
+        screen_.addstr(f'\u251c\u2500\u2500')
+        screen_.addstr(f'ping: ', curses.color_pair(16))
+        screen_.addstr(f'{ping_:.1f}\n', curses.color_pair(10))
+
+        screen_.addstr(f'\u251c\u2500\u2500')
+        screen_.addstr(f'data\n', curses.color_pair(16))
+
+        for i, (k, v) in enumerate(arduinodata_.items()):
+            if i < len(arduinodata_) - 1:
+                screen_.addstr(f'\u2502  \u251c\u2500\u2500{k}: {v}\n')
+            else:
+                screen_.addstr(f'\u2502  \u2514\u2500\u2500{k}: {v}\n')
+
+        screen_.addstr(f'\u2514\u2500\u2500')
+        screen_.addstr(f'commands\n', curses.color_pair(16))
+
+        for i, (k, v) in enumerate(data.items()):
+            if i < len(data) - 1:
+                screen_.addstr(f'   \u251c\u2500\u2500{k}: {v}\n')
+            else:
+                screen_.addstr(f'   \u2514\u2500\u2500{k}: {v}\n')
+
+    # video data
+    screen_.addstr('Camera:  ', curses.color_pair(16))
+    screen_.addstr(f'{video_stream_.status}\n', curses.color_pair(video_stream_.status_color))
+    if video_stream_.status == 'connected':
+        screen_.addstr(f'\u2514\u2500fps: ')
+        screen_.addstr(f'{fps_:.1f}\n', curses.color_pair(10))
+
+    screen_.refresh()
 
 
 def main(screen=curses.initscr(), robot_aruco_id=7):
@@ -113,7 +152,7 @@ def main(screen=curses.initscr(), robot_aruco_id=7):
         if robot_aruco_id in dictionary.keys():
             position, heading = dictionary[robot_aruco_id]
 
-            ang = just_angle(position, heading, mouse_pos)
+            ang = get_angle(position, heading, mouse_pos)
             dist = np.linalg.norm(mouse_pos - position)
 
             cv2.line(frame, position, mouse_pos, (255, 0, 0), 1)
@@ -125,22 +164,13 @@ def main(screen=curses.initscr(), robot_aruco_id=7):
             data["motors"] = [0, 0]
             arduino_stream.write(data)
             break
-        motorspeed = np.zeros(2)
 
         if key_r in keys:
             data["servos"][0] += 1
         if key_f in keys:
             data["servos"][0] -= 1
 
-        # if key_w in keys:
-        #     motorspeed += np.int32([255, 255])
-        # if key_a in keys:
-        #     motorspeed += np.int32([-255, 255])
-        # if key_s in keys:
-        #     motorspeed += np.int32([-255, -255])
-        # if key_d in keys:
-        #     motorspeed += np.int32([255, -255])
-
+        # calculate motor speeds
         err = ang
         s = K_rot.p * err
         d = np.clip(dist / 100, 0.1, 1)
@@ -152,51 +182,14 @@ def main(screen=curses.initscr(), robot_aruco_id=7):
             s = offset(s, 50)
             motorspeed = [s, -s]
 
-        fps, ping = video_stream.get_rate(), arduino_stream.get_rate()
-        screen.clear()
-        # arduino data
-        screen.addstr('\nArduino: ', curses.color_pair(16))
-        screen.addstr(f'{arduino_stream.status}\n', curses.color_pair(arduino_stream.status_color))
-        if arduino_stream.status == 'connected':
-
-            screen.addstr(f'\u251c\u2500\u2500')
-            screen.addstr(f'ping: ', curses.color_pair(16))
-            screen.addstr(f'{ping:.1f}\n', curses.color_pair(10))
-
-            screen.addstr(f'\u251c\u2500\u2500')
-            screen.addstr(f'data\n', curses.color_pair(16))
-
-            for i, (k, v) in enumerate(arduinodata.items()):
-                if i < len(arduinodata) - 1:
-                    screen.addstr(f'\u2502  \u251c\u2500\u2500{k}: {v}\n')
-                else:
-                    screen.addstr(f'\u2502  \u2514\u2500\u2500{k}: {v}\n')
-
-            screen.addstr(f'\u2514\u2500\u2500')
-            screen.addstr(f'commands\n', curses.color_pair(16))
-
-            for i, (k, v) in enumerate(data.items()):
-                if i < len(data) - 1:
-                    screen.addstr(f'   \u251c\u2500\u2500{k}: {v}\n')
-                else:
-                    screen.addstr(f'   \u2514\u2500\u2500{k}: {v}\n')
-
-        # video data
-        screen.addstr('Camera:  ', curses.color_pair(16))
-        screen.addstr(f'{video_stream.status}\n', curses.color_pair(video_stream.status_color))
-        if video_stream.status == 'connected':
-            screen.addstr(f'\u2514\u2500fps: ')
-            screen.addstr(f'{fps:.1f}\n', curses.color_pair(10))
-
-        # program data
-        # screen.addstr(f'tps: {tickrate:.1f}\tmotors: {data["motors"]}')
-        # screen.addstr(f'ange: {ang:.1f}\tdistance: {dist:.1f}\tmotor parameter: {s:.1f}')
-        screen.refresh()
-
         motorspeed = list(np.clip(motorspeed, -255, 255))
         data["motors"] = motorspeed
 
-        # output to frame
+        # draw info to screen
+        fps, ping = video_stream.get_rate(), arduino_stream.get_rate()
+        draw_ui(screen, arduino_stream, ping, arduinodata, video_stream, fps)
+
+        # output image to frame
         cv2.imshow('frame', frame)
         cv2.waitKey(1)
 

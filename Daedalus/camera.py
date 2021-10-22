@@ -3,7 +3,7 @@ import numpy as np
 from daedalus.streaming import VideoStreamHandler
 from daedalus.Image import undistort, square
 from daedalus.colour_tracker import thinning_algorithm
-from daedalus.navigation import angle_finder, get_main_contours, get_centroid, just_angle
+from daedalus.navigation import angle_finder, get_main_contours, get_centroid, get_angle
 from daedalus.aruco import analyse
 
 
@@ -74,12 +74,12 @@ def main():
         # find centroid of big square for direction
         im = np.zeros(mask_bsquare.shape, "uint8")
         # get contours of blue mask
-        contours = get_main_contours(mask_bsquare, 500)
+        contours = get_main_contours(mask_bsquare, 0, 500)
         # get position of the centroid
         if len(contours) == 0:
             pass
         else:
-            position_blue = np.asarray(get_centroid(im, contours))
+            position_blue = np.asarray(get_centroid(contours, im))
             # get direction
             position_heading = {}
             analyse(frame, position_heading)
@@ -87,7 +87,7 @@ def main():
             if array_1 != None:
                 robot_position = array_1[0]
                 header = array_1[1]
-                angle_blue = just_angle(robot_position, header, position_blue)
+                angle_blue = get_angle(robot_position, header, position_blue)
                 cv2.putText(im, f'angle: {angle_blue}', (50, 50), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 0, 0), 2,
                             cv2.LINE_AA)
                 if 10 < angle_blue <= 180:
@@ -105,7 +105,7 @@ def main():
         if len(contours1) == 0:
             pass
         else:
-            position_red = np.asarray(get_centroid(im1, contours1))
+            position_red = np.asarray(get_centroid(contours1, im1))
             # get direction
             position_heading1 = {}
             analyse(frame, position_heading1)
@@ -113,7 +113,7 @@ def main():
             if array1 != None:
                 robot_position = array1[0]
                 header1 = array1[1]
-                angle_red = just_angle(robot_position, header1, position_red)
+                angle_red = get_angle(robot_position, header1, position_red)
                 #cv2.putText(im1, f'angle: {angle_red}', (50, 50), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 0, 0), 2,
                         #cv2.LINE_AA)
                 #if 10 < angle_red <= 180:
@@ -129,7 +129,7 @@ def main():
         if len(contours3) == 0:
             pass
         else:
-            position_blocks = get_centroid(im3, contours3)
+            position_blocks = get_centroid(contours3, im3)
 
 
 

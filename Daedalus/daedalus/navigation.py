@@ -19,7 +19,7 @@ def get_main_contours(img, lower_size=0, upper_size=1000000):
 
 
 # gets the centroid and draws it on the image provided
-def get_centroid(img, contours):
+def get_centroid(contours, img):
     for contour in contours:
         cv2.drawContours(img, contour, -1, (255, 255, 255), 3)
 
@@ -51,7 +51,7 @@ def angle_finder(img, robot_position, destination, heading):
     return angle_degrees
 
 
-def just_angle(position, heading, target):
+def get_angle(position, heading, target):
     to_target = target - position
     rads = np.arctan2(to_target[1], to_target[0]) - np.arctan2(heading[1], heading[0])
     if rads > np.pi:
@@ -63,9 +63,8 @@ def just_angle(position, heading, target):
 
 
 def find_block(img):
-
     # turn the image into HSV for colour detection
-    imgHSV = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
+    imgHSV = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
 
     # values for blocks mask (whether red top or blue top)
     lower_block = np.array([90, 107, 123])
@@ -76,9 +75,9 @@ def find_block(img):
     im = np.zeros(mask_block.shape, "uint8")
     contours = get_main_contours(mask_block, 100, 300)
     if len(contours) == 0:
-        pass
+        return False
     else:
-        position_block = np.asarray(get_centroid(im, contours))
+        position_block = np.asarray(get_centroid(contours, im))
 
     return position_block
 
@@ -88,3 +87,7 @@ class PID_consts:
     p: float
     i: float
     d: float
+
+
+def offset(x, o):
+    return x + np.sign(x) * o

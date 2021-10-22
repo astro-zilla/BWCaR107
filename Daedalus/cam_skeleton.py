@@ -3,7 +3,7 @@ import numpy as np
 
 from daedalus.Image import square, undistort
 from daedalus.aruco import analyse
-from daedalus.navigation import just_angle
+from daedalus.navigation import get_angle
 from daedalus.streaming import VideoStreamHandler
 
 
