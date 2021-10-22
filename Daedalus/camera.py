@@ -17,15 +17,20 @@ def main():
         frame = video_stream.frame
         frame = undistort(frame, balance=0.5)
         frame = square(frame)
+        frame_copy = frame.copy()
+        frame_copy = frame_copy[170:610,:]
+        cv2.imshow("cropped", frame_copy)
 
         # use HSV colour system for detection
         imgHSV = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
+        imgHSV1 = cv2.cvtColor(frame_copy, cv2.COLOR_BGR2HSV)
 
         # values for white line mask
         lower_line = np.array([0, 0, 220])
         upper_line = np.array([178, 27, 255])
         mask_line = cv2.inRange(imgHSV, lower_line, upper_line)
         mask_line_copy = mask_line.copy()
+        mask_line1 = cv2.inRange(imgHSV1, lower_line, upper_line)
 
         # values for blocks mask (whether red top or blue top)
         lower_block = np.array([90, 107, 123])
@@ -63,18 +68,8 @@ def main():
         # get a thinner version to create a path or reduce image noise
         thin = thinning_algorithm(mask_line_copy)
 
-        contours_line, hierarchy_line = cv2.findContours(mask_line, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
-        img1 = np.zeros(mask_line.shape, "uint8")
-        for contour in contours_line:
-            area_l = cv2.contourArea(contour)
-            print(area_l)
-            #if area_l < 100:
-            cv2.drawContours(img1, contour, -1, (255, 255, 255), 3)
-
-
         stacked_results2 = np.concatenate((mask_line, thin), axis=1)
         #cv2.imshow("lines", stacked_results2)
-        cv2.imshow("lien", img1)
 
         # find centroid of big square for direction
         im = np.zeros(mask_bsquare.shape, "uint8")
@@ -92,7 +87,7 @@ def main():
             if array_1 != None:
                 robot_position = array_1[0]
                 header = array_1[1]
-                angle_blue = just_angle(im, robot_position, header, position_blue)
+                angle_blue = just_angle(robot_position, header, position_blue)
                 cv2.putText(im, f'angle: {angle_blue}', (50, 50), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 0, 0), 2,
                             cv2.LINE_AA)
                 if 10 < angle_blue <= 180:
@@ -118,7 +113,7 @@ def main():
             if array1 != None:
                 robot_position = array1[0]
                 header1 = array1[1]
-                angle_red = just_angle(im1, robot_position, header1, position_red)
+                angle_red = just_angle(robot_position, header1, position_red)
                 #cv2.putText(im1, f'angle: {angle_red}', (50, 50), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 0, 0), 2,
                         #cv2.LINE_AA)
                 #if 10 < angle_red <= 180:
@@ -139,7 +134,7 @@ def main():
 
 
 
-        #cv2.imshow("im", im)
+        cv2.imshow("im", im)
         #cv2.imshow("im1", im1)
         #cv2.imshow("IM3", im3)
 
