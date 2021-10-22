@@ -1,3 +1,4 @@
+import curses
 import json
 import socket
 import time
@@ -6,6 +7,19 @@ from threading import Event, Thread
 
 import cv2
 import numpy as np
+
+BLUE = 10
+GREEN = 11
+CYAN = 12
+RED = 13
+MAGENTA = 14
+YELLOW = 15
+WHITE = 16
+
+INITIALIZED = 'initialized'
+CONNECTING = 'connecting'
+CONNECTED = 'connected'
+TERMINATED = 'terminated'
 
 
 class ArduinoStreamHandler(Thread):
@@ -21,14 +35,20 @@ class ArduinoStreamHandler(Thread):
         self.terminated = Event()
         self.out = Event()
 
-        self.times = [0.] * 50
+        self._status = INITIALIZED
+        self.status_color = BLUE
+
+        self.t0 = time.time()
+        self.times = {}
 
     def connect(self):
         try:
-            print(f'# listening for connection from Arduino')
+            self._status = CONNECTING
+            self.status_color = YELLOW
             self.client, addr = self.server.accept()
             self.file = self.client.makefile()
-            print(f'# recieved connection from arduino: {addr[0]}:{addr[1]}')
+            self._status = CONNECTED
+            self.status_color = GREEN
             return True
         except socketError:
             return False
@@ -41,18 +61,41 @@ class ArduinoStreamHandler(Thread):
 
         while not self.terminated.is_set():
             # if self.out.is_set():
-            self.out_data["time"] = time.time()
-            self.client.send(bytes(json.dumps(self.out_data),'utf-8'))
+            self.out_data["time"] = int((time.time() - self.t0) * 100)
+            self.client.send(bytes(json.dumps(self.out_data), 'utf-8'))
             # self.out.clear()
 
             # it's ok for this to block because the arduino can't handle more writes than reads to it
-            self.in_data = json.loads(self.file.readline())
-            print(time.time(),self.in_data["time"])
-            self.times.append(time.time()-self.in_data["time"])
-            self.times = self.times[-50:]
+            try:
+                r = json.loads(self.file.readline())
+                self.in_data = r
+            except json.decoder.JSONDecodeError:
+                pass
+
+            self.times[time.time()] = time.time() - (self.in_data["time"] / 100 + self.t0)
 
     def get_rate(self):
-        return np.mean(self.times)
+
+        self.times = {t: p for (t, p) in self.times.items() if (time.time() - t) < 5}
+
+        if self.times:
+            ping = 1000 * np.mean(list(self.times.values()))
+            if ping < 0 or ping > 5000:
+                ping = np.nan
+            return ping
+        else:
+            self.reconnect()
+            return 0
+
+    @property
+    def status(self):
+        if self._status == CONNECTING:
+            return f'{CONNECTING} {spinner()}'
+        else:
+            return self._status
+
+    def reconnect(self):
+        pass
 
     def read(self):
         return self.in_data
@@ -67,7 +110,8 @@ class ArduinoStreamHandler(Thread):
             self.client.close()
 
         self.server.close()
-        print('# arduino connection successfully terminated')
+        self._status = TERMINATED
+        self.status_color = BLUE
 
 
 class StreamReader(Thread):
@@ -112,15 +156,19 @@ class VideoStreamHandler(Thread):
         self.frame = np.zeros((self.height, self.width, 3), dtype='uint8')
         cv2.putText(self.frame, 'NO SIGNAL', (self.width // 2 - 80, self.height // 2), cv2.FONT_HERSHEY_SIMPLEX, 1,
                     (255, 255, 255), 2)
-        self.times = [0] * 10  # init list of frame arrival times to calculate fps
+        self.times = []
         self.source = source
+        self._status = INITIALIZED
+        self.status_color = BLUE
 
     def connect(self):
-        print('# connecting to camera')
+        self._status = CONNECTING
+        self.status_color = YELLOW
         self.cap = cv2.VideoCapture(self.source)
         # self.width = int(self.cap.get(cv2.CAP_PROP_FRAME_WIDTH))
         # self.height = int(self.cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
-        print('# camera datastream initiated')
+        self._status = CONNECTED
+        self.status_color = GREEN
 
     def run(self):
         while not self.terminated:
@@ -131,7 +179,6 @@ class VideoStreamHandler(Thread):
             if frame is not None and frame.shape != (0, 0, 3):
                 self.frame = frame
                 self.times.append(time.time())
-                self.times = self.times[-10:]  # keep 10-buffer of frame times to calc avg
             else:
                 self.cap.release()
                 self.frame = np.zeros((150, 300, 3), dtype='uint8')
@@ -140,13 +187,35 @@ class VideoStreamHandler(Thread):
                 self.connect()
 
         self.cap.release()
-        print('# camera connection successfully terminated')
+        self._status = TERMINATED
+        self.status_color = BLUE
 
     def get_rate(self) -> float:
-        if self.times[-1] < (time.time() - 10):
-            return 0  # fps < 0.1 = 0
-        else:
+        self.times = [t for t in self.times if (time.time() - t) < 5]
+        if self.times:
             return 1 / np.mean(np.diff(self.times))  # return calc fps
+        else:
+            return 0
+
+    @property
+    def status(self):
+        if self._status == CONNECTING:
+            return f'{CONNECTING} {spinner()}'
+        else:
+            return self._status
 
     def terminate(self):
         self.terminated = True
+
+
+def spinner():
+    t = time.time() % 1
+
+    if t < 0.25:
+        return '\u2502'
+    elif t < 0.5:
+        return '\u2571'
+    elif t < 0.75:
+        return '\u2500'
+    else:
+        return '\u2572'

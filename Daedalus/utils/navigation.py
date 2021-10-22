@@ -30,7 +30,7 @@ def get_centroid(img, contours):
     # calculate x,y coordinate of center
     cx = int(M["m10"] / M["m00"])
     cy = int(M["m01"] / M["m00"])
-    #cv2.circle(img, (cx, cy), 5, (255, 255, 255), -1)
+    cv2.circle(img, (cx, cy), 5, (255, 255, 255), -1)
     position = (cx, cy)
 
     return position
@@ -60,34 +60,6 @@ def just_angle(position, heading, target):
         rads += 2 * np.pi
 
     return (rads * 180) / np.pi
-
-
-def find_block(img):
-
-    # convert the image into HSV for colour detection
-    imgHSV = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
-
-    # values for blocks mask (whether red top or blue top)
-    lower_block = np.array([90, 107, 123])
-    upper_block = np.array([179, 255, 255])
-    mask_block = cv2.inRange(imgHSV, lower_block, upper_block)
-
-    # create matrix to store the contours and centroid of the block
-    im = np.zeros(mask_block.shape, "uint8")
-    contours = get_main_contours(mask_block, 100, 300)
-
-    # pass to account for possible delays in camera
-    if len(contours) == 0:
-        pass
-    else:
-        # get centroid of the block
-        position_block = np.asarray(get_centroid(im, contours))
-
-    return position_block
-
-
-
-
 
 
 @dataclass
