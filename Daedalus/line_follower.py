@@ -1,12 +1,3 @@
-import numpy as np
-
-# when leds are off it means they're on the white line
-led1 = 1
-led2 = 0
-led3 = 0
-led4 = 1
-
-
 def follow_line(led1, led2, led3, led4):
 
     while True:
@@ -31,7 +22,7 @@ def follow_line(led1, led2, led3, led4):
                 print("go left, left motor speed to half, right motor full speed")
 
         # if either two pairs are on and the other two are off
-        elif (led1 == 0 and led2 == 0 and led3 == 1 and led4 == 1) or (led3 == 0 and led4==0 and led1 == 1 and led2 == 1)
+        elif (led1 == 0 and led2 == 0 and led3 == 1 and led4 == 1) or (led3 == 0 and led4==0 and led1 == 1 and led2 == 1):
             print("turn 90 degrees around")
 
         else:
