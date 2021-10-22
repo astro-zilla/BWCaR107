@@ -1,17 +1,16 @@
 import curses
 import json
 import socket
-import sys
 import time
 
 import cv2
 import numpy as np
 from pynput.keyboard import KeyCode, Listener
 
-from utils.Image import square, undistort
-from utils.aruco import analyse
-from utils.navigation import PID_consts, just_angle, offset, sigmoid
-from utils.streaming import ArduinoStreamHandler, VideoStreamHandler
+from daedalus.Image import square, undistort
+from daedalus.aruco import analyse
+from daedalus.navigation import PID_consts, just_angle, offset, sigmoid
+from daedalus.streaming import ArduinoStreamHandler, VideoStreamHandler
 
 mouse_pos = np.int32([0, 0])
 keys = set()

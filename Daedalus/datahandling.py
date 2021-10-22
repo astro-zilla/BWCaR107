@@ -1,4 +1,4 @@
-from Daedalus.utils.smoother import Smoother
+from daedalus.smoother import Smoother
 
 def main():
     smoother = Smoother(20)

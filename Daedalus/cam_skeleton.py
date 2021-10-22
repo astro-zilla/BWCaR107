@@ -1,10 +1,10 @@
 import cv2
 import numpy as np
 
-from Daedalus.utils.Image import square, undistort
-from Daedalus.utils.aruco import analyse
-from Daedalus.utils.navigation import just_angle
-from Daedalus.utils.streaming import VideoStreamHandler
+from daedalus.Image import square, undistort
+from daedalus.aruco import analyse
+from daedalus.navigation import just_angle
+from daedalus.streaming import VideoStreamHandler
 
 
 def main(robot_aruco_id=2):

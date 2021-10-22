@@ -1,7 +1,7 @@
 # import matplotlib.pyplot as plt
 # import numpy as np
 #
-# from Daedalus.utils.navigation import sigmoid
+# from daedalus.navigation import sigmoid
 #
 #
 # def main():

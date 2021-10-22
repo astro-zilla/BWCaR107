@@ -1,8 +1,8 @@
 import cv2
 import numpy as np
 
-from Daedalus.utils.Image import square, undistort
-from Daedalus.utils.streaming import VideoStreamHandler
+from daedalus.Image import square, undistort
+from daedalus.streaming import VideoStreamHandler
 
 points = np.int32([[156, 707], [224, 63], [861, 102], [830, 765]])
 

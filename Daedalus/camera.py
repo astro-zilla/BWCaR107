@@ -1,10 +1,10 @@
 import cv2
 import numpy as np
-from Daedalus.utils.streaming import VideoStreamHandler
-from Daedalus.utils.Image import undistort, square
-from Daedalus.utils.colour_tracker import thinning_algorithm
-from Daedalus.utils.navigation import angle_finder, get_main_contours, get_centroid, just_angle
-from Daedalus.utils.aruco import analyse
+from daedalus.streaming import VideoStreamHandler
+from daedalus.Image import undistort, square
+from daedalus.colour_tracker import thinning_algorithm
+from daedalus.navigation import angle_finder, get_main_contours, get_centroid, just_angle
+from daedalus.aruco import analyse
 
 
 def main():
