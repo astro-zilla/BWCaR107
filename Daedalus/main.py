@@ -25,8 +25,16 @@ key_d = KeyCode.from_char('d')
 key_r = KeyCode.from_char('r')
 key_f = KeyCode.from_char('f')
 
+BLUE = 10
+GREEN = 11
+CYAN = 12
+RED = 13
+MAGENTA = 14
+YELLOW = 15
+WHITE = 16
 
-def mouse(event, x, y, flags, params):
+
+def mouse(event: int, x: float, y: float, flags, params):
     global mouse_pos
     if event == cv2.EVENT_LBUTTONDOWN:
         mouse_pos = np.int32([x, y])
@@ -46,19 +54,20 @@ def on_release(key):
         return False
 
 
-def draw_ui(screen_, arduino_stream_, ping_, arduinodata_, video_stream_, fps_):
+def draw_ui(screen_: curses.window, arduino_stream_: ArduinoStreamHandler, ping_: float, arduinodata_: dict,
+            video_stream_: VideoStreamHandler, fps_: float, status_: str, status_color_: int, tickrate_: float) -> None:
     screen_.clear()
     # arduino data
-    screen_.addstr('\nArduino: ', curses.color_pair(16))
+    screen_.addstr('\nArduino: ', curses.color_pair(WHITE))
     screen_.addstr(f'{arduino_stream_.status}\n', curses.color_pair(arduino_stream_.status_color))
     if arduino_stream_.status == 'connected':
 
         screen_.addstr(f'\u251c\u2500\u2500')
-        screen_.addstr(f'ping: ', curses.color_pair(16))
-        screen_.addstr(f'{ping_:.1f}\n', curses.color_pair(10))
+        screen_.addstr(f'ping: ', curses.color_pair(WHITE))
+        screen_.addstr(f'{ping_:.1f} ms\n', curses.color_pair(BLUE))
 
         screen_.addstr(f'\u251c\u2500\u2500')
-        screen_.addstr(f'data\n', curses.color_pair(16))
+        screen_.addstr(f'data\n', curses.color_pair(WHITE))
 
         for i, (k, v) in enumerate(arduinodata_.items()):
             if i < len(arduinodata_) - 1:
@@ -67,7 +76,7 @@ def draw_ui(screen_, arduino_stream_, ping_, arduinodata_, video_stream_, fps_):
                 screen_.addstr(f'\u2502  \u2514\u2500\u2500{k}: {v}\n')
 
         screen_.addstr(f'\u2514\u2500\u2500')
-        screen_.addstr(f'commands\n', curses.color_pair(16))
+        screen_.addstr(f'commands\n', curses.color_pair(WHITE))
 
         for i, (k, v) in enumerate(data.items()):
             if i < len(data) - 1:
@@ -76,16 +85,23 @@ def draw_ui(screen_, arduino_stream_, ping_, arduinodata_, video_stream_, fps_):
                 screen_.addstr(f'   \u2514\u2500\u2500{k}: {v}\n')
 
     # video data
-    screen_.addstr('Camera:  ', curses.color_pair(16))
+    screen_.addstr('Camera: ', curses.color_pair(WHITE))
     screen_.addstr(f'{video_stream_.status}\n', curses.color_pair(video_stream_.status_color))
     if video_stream_.status == 'connected':
-        screen_.addstr(f'\u2514\u2500fps: ')
-        screen_.addstr(f'{fps_:.1f}\n', curses.color_pair(10))
+        screen_.addstr(f'\u2514\u2500\u2500')
+        screen_.addstr(f'fps: ', curses.color_pair(WHITE))
+        screen_.addstr(f'{fps_:.1f}\n', curses.color_pair(BLUE))
+
+    screen_.addstr('OpenCV: ', curses.color_pair(WHITE))
+    screen_.addstr(f'{status_}\n', curses.color_pair(status_color_))
+    screen_.addstr(f'\u2514\u2500\u2500')
+    screen_.addstr(f'tickrate: ', curses.color_pair(WHITE))
+    screen_.addstr(f'{tickrate_:.1f} Hz\n', curses.color_pair(BLUE))
 
     screen_.refresh()
 
 
-def main(screen=curses.initscr(), robot_aruco_id=7):
+def main(screen: curses.window = curses.initscr(), robot_aruco_id: int = 7):
     # broadcast locally on 53282
     host = socket.gethostname()
     port = 53282
@@ -99,7 +115,7 @@ def main(screen=curses.initscr(), robot_aruco_id=7):
     # init asynchronous "threading" stream handlers
     video_stream = VideoStreamHandler("http://localhost:8081/stream/video.mjpeg")
     arduino_stream = ArduinoStreamHandler(server)
-    arduino_stream.write(bytes(json.dumps(data), 'utf-8'))
+    arduino_stream.write(data)
 
     # start streams
     video_stream.start()
@@ -138,8 +154,8 @@ def main(screen=curses.initscr(), robot_aruco_id=7):
         # get/send arduino data from
         arduino_stream.write(data)
         arduinodata = arduino_stream.read()
+        # arduinodata["time"] = arduinodata["time"]/100
         # get video data from stream
-        # todo figure out how to multiprocess the resource-intensive bits
         frame1 = video_stream.frame
 
         frame = undistort(frame1, balance=0.5)
@@ -150,6 +166,8 @@ def main(screen=curses.initscr(), robot_aruco_id=7):
         ang = 0
         dist = 0
         if robot_aruco_id in dictionary.keys():
+            status = 'tracking'
+            status_color = GREEN
             position, heading = dictionary[robot_aruco_id]
 
             ang = get_angle(position, heading, mouse_pos)
@@ -157,6 +175,9 @@ def main(screen=curses.initscr(), robot_aruco_id=7):
 
             cv2.line(frame, position, mouse_pos, (255, 0, 0), 1)
             cv2.circle(frame, mouse_pos, 3, (0, 0, 255))
+        else:
+            status = 'marker not found'
+            status_color = YELLOW
 
         # press q key to exit
         if key_q in keys:
@@ -187,7 +208,7 @@ def main(screen=curses.initscr(), robot_aruco_id=7):
 
         # draw info to screen
         fps, ping = video_stream.get_rate(), arduino_stream.get_rate()
-        draw_ui(screen, arduino_stream, ping, arduinodata, video_stream, fps)
+        draw_ui(screen, arduino_stream, ping, arduinodata, video_stream, fps, status, status_color, tickrate)
 
         # output image to frame
         cv2.imshow('frame', frame)

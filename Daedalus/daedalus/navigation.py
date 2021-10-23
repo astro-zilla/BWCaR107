@@ -1,3 +1,4 @@
+from collections import Iterable
 from dataclasses import dataclass
 
 import cv2
@@ -51,7 +52,7 @@ def angle_finder(img, robot_position, destination, heading):
     return angle_degrees
 
 
-def get_angle(position, heading, target):
+def get_angle(position: Iterable[float], heading: Iterable[float], target: Iterable[float]) -> float:
     to_target = target - position
     rads = np.arctan2(to_target[1], to_target[0]) - np.arctan2(heading[1], heading[0])
     if rads > np.pi:
@@ -89,5 +90,5 @@ class PID_consts:
     d: float
 
 
-def offset(x, o):
+def offset(x: float, o: float) -> float:
     return x + np.sign(x) * o

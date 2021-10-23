@@ -1,9 +1,9 @@
-import curses
 import json
 import socket
 import time
 from socket import error as socketError
 from threading import Event, Thread
+from typing import Dict
 
 import cv2
 import numpy as np
@@ -41,7 +41,7 @@ class ArduinoStreamHandler(Thread):
         self.t0 = time.time()
         self.times = {}
 
-    def connect(self):
+    def connect(self) -> bool:
         try:
             self._status = CONNECTING
             self.status_color = YELLOW
@@ -53,18 +53,15 @@ class ArduinoStreamHandler(Thread):
         except socketError:
             return False
 
-    def run(self):
+    def run(self) -> None:
         while not self.client:
             self.connect()
             if self.terminated.is_set():
                 return
 
         while not self.terminated.is_set():
-            # if self.out.is_set():
             self.out_data["time"] = int((time.time() - self.t0) * 100)
             self.client.send(bytes(json.dumps(self.out_data), 'utf-8'))
-            # self.out.clear()
-
             # it's ok for this to block because the arduino can't handle more writes than reads to it
             try:
                 r = json.loads(self.file.readline())
@@ -74,7 +71,7 @@ class ArduinoStreamHandler(Thread):
 
             self.times[time.time()] = time.time() - (self.in_data["time"] / 100 + self.t0)
 
-    def get_rate(self):
+    def get_rate(self) -> float:
 
         self.times = {t: p for (t, p) in self.times.items() if (time.time() - t) < 5}
 
@@ -88,23 +85,22 @@ class ArduinoStreamHandler(Thread):
             return 0
 
     @property
-    def status(self):
+    def status(self) -> str:
         if self._status == CONNECTING:
             return f'{CONNECTING} {spinner()}'
         else:
             return self._status
 
-    def reconnect(self):
+    def reconnect(self) -> None:
         pass
 
-    def read(self):
+    def read(self) -> dict:
         return self.in_data
 
-    def write(self, data):
+    def write(self, data: dict) -> None:
         self.out_data = data
-        self.out.set()
 
-    def terminate(self):
+    def terminate(self) -> None:
         self.terminated.set()
         if self.client:
             self.client.close()
@@ -123,7 +119,7 @@ class StreamReader(Thread):
         self.ready = Event()
         self.terminated = Event()
 
-    def run(self):
+    def run(self) -> None:
         while not self.terminated.is_set():
             self.ready.wait(5)
             self.data = self.file.readline()
@@ -147,7 +143,7 @@ class StreamWriter(Thread):
 
 
 class VideoStreamHandler(Thread):
-    def __init__(self, source):
+    def __init__(self, source:str):
         super().__init__()
         self.cap = None
         self.width = 300
@@ -161,7 +157,7 @@ class VideoStreamHandler(Thread):
         self._status = INITIALIZED
         self.status_color = BLUE
 
-    def connect(self):
+    def connect(self) -> None:
         self._status = CONNECTING
         self.status_color = YELLOW
         self.cap = cv2.VideoCapture(self.source)
@@ -170,7 +166,7 @@ class VideoStreamHandler(Thread):
         self._status = CONNECTED
         self.status_color = GREEN
 
-    def run(self):
+    def run(self) -> None:
         while not self.terminated:
 
             if self.cap is None:
@@ -198,7 +194,7 @@ class VideoStreamHandler(Thread):
             return 0
 
     @property
-    def status(self):
+    def status(self) -> str:
         if self._status == CONNECTING:
             return f'{CONNECTING} {spinner()}'
         else:
@@ -208,7 +204,7 @@ class VideoStreamHandler(Thread):
         self.terminated = True
 
 
-def spinner():
+def spinner() -> str:
     t = time.time() % 1
 
     if t < 0.25:
