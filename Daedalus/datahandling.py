@@ -1,14 +1,19 @@
 from daedalus.smoother import Smoother
 
 def main():
-    smoother = Smoother(20)
 
-    with open('magnetic.csv') as f:
-        data = f.readlines()
-    data = [float(item.strip('\n')) for item in data]
+    window_length = 10  #length of rolling average window
+    threshold = 100  # average at which metal is present
 
-    for d in data:
-        print(Smoother.process(smoother,d))
+
+    while True:
+        # import new data from arduino as new_data
+        rolling_average = Smoother.process(Smoother(window_length), new_data)
+
+        if rolling_average < threshold:
+            print("metal")
+        else:
+            print("not metal")
 
 if __name__ == "__main__":
     main()
