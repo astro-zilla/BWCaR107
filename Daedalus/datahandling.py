@@ -12,8 +12,10 @@ def main():
 
         if rolling_average < threshold:
             print("metal")
+            #set arduino red LED pin to high (D9)
         else:
             print("not metal")
+            #set arduino green LED pin to high (D10)
 
 if __name__ == "__main__":
     main()
