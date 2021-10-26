@@ -67,6 +67,7 @@ def angle_finder(img, robot_position, destination, heading):
 
 
 def find_block(img):
+    # make sure to use a cropped frame not to detect any blocks that have already been placed
     # turn the image into HSV for colour detection
     imgHSV = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
 

@@ -30,11 +30,11 @@ def main():
         # values for white line mask
         lower_line = np.array([0, 0, 220])
         upper_line = np.array([178, 27, 255])
-        mask_line = cv2.inRange(imgHSV1, lower_line, upper_line)
+        mask_line = cv2.inRange(imgHSV, lower_line, upper_line)
         mask_line_blur = cv2.GaussianBlur(mask_line, (7,7), 1)
         mask_line_canny = cv2.Canny(mask_line_blur,50, 50)
         mask_line_copy = mask_line.copy()
-        contours_canny = get_main_contours(mask_line_canny)
+        contours_canny = get_main_contours(mask_line_canny, 1000)
         for cnt in contours_canny:
             peri = cv2.arcLength(cnt, False)
             approx = cv2.approxPolyDP(cnt, 0.02*peri, False)
