@@ -37,6 +37,7 @@ class ArduinoStreamHandler(Thread):
 
         self._status = INITIALIZED
         self.status_color = BLUE
+        self.available = False
 
         self.t0 = time.time()
         self.times = {}
@@ -73,6 +74,7 @@ class ArduinoStreamHandler(Thread):
                 self.in_data = r
                 self._status = CONNECTED
                 self.status_color = GREEN
+                self.available = True
             except json.decoder.JSONDecodeError:
                 self._status = ERROR
                 self.status_color = RED
@@ -109,6 +111,7 @@ class ArduinoStreamHandler(Thread):
 
     def read(self) -> dict:
         # return last data read
+        self.available = False
         return self.in_data
 
     def write(self, data: dict) -> None:

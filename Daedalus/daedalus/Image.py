@@ -1,12 +1,10 @@
-import warnings
-
 import cv2
 import numpy as np
 
 DIM = (1016, 760)
 K = np.array([[644.0995890009748, 0.0, 514.3136068698651], [0.0, 645.7478380069424, 401.9020082118956], [0.0, 0.0, 1.0]])
 D = 1.1 * np.array([[-0.16047886876042616], [0.5186348922845948], [-1.0904314778194455], [0.8084994142726131]])
-from_pts = np.float32([[156, 707], [224, 63], [861, 102], [830, 765]])
+from_pts_default = np.float32([[154, 713], [225, 68], [862, 104], [832, 783]])
 
 
 def undistort(img, balance=0.0, dim2=None, dim3=None):
@@ -25,7 +23,11 @@ def undistort(img, balance=0.0, dim2=None, dim3=None):
     return cv2.remap(img, map1, map2, interpolation=cv2.INTER_LINEAR, borderMode=cv2.BORDER_CONSTANT)
 
 
-def square(img):
+def square(img, pts=None):
+    if pts is None:
+        from_pts = from_pts_default
+    else:
+        from_pts = pts
     to_pts = np.float32([[0, DIM[1]], [0, 0], [DIM[1], 0], [DIM[1], DIM[1]]])
     squaring_M = cv2.getPerspectiveTransform(from_pts, to_pts)
-    return cv2.warpPerspective(img, squaring_M, (DIM[1],DIM[1]))
+    return cv2.warpPerspective(img, squaring_M, (DIM[1], DIM[1]))

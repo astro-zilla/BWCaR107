@@ -1,7 +1,7 @@
 import time
 from random import random
 
-from daedalus.smoother import Smoother
+from daedalus.peripherals import Smoother
 
 def main():
 
