@@ -204,14 +204,14 @@ class VideoStreamHandler(Thread):
         self.terminated = True
 
 
-def spinner() -> str:
+def spinner() -> int:
     t = time.time() % 1
 
     if t < 0.25:
-        return '\u2502'
+        return 1
     elif t < 0.5:
-        return '\u2571'
+        return 0
     elif t < 0.75:
-        return '\u2500'
+        return 1
     else:
-        return '\u2572'
+        return 0
