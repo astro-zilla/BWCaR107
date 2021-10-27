@@ -58,29 +58,25 @@ class ArduinoStreamHandler(Thread):
         while not self.connect():
             if self.terminated.is_set():
                 return
+        with open('daedalus.log', 'a+') as log:
+            while not self.terminated.is_set():
 
-        while not self.terminated.is_set():
+                self.out_data["time"] = int((time.time() - self.t0) * 100)
+                # try loop is new: if client is reset to None, expected behaiviour is a fail by ConnectionResetError
+                # todo check is the old setup was running this loop really fast and just hitting the JSONDecodeError
+                try:
+                    self.client.send(bytes(str(self.out_data), 'utf-8'))
+                except socket.timeout or ConnectionError as e:
+                    log.write(e)
+                # it's ok for this to block because the arduino can't handle more writes than reads to it
+                try:
+                    r = json.loads(self.file.readline())
+                    self.in_data = r
+                    self.available = True
+                except json.decoder.JSONDecodeError as e:
+                    log.write(str(e))
 
-            self.out_data["time"] = int((time.time() - self.t0) * 100)
-            # try loop is new: if client is reset to None, expected behaiviour is a fail by ConnectionResetError
-            # todo check is the old setup was running this loop really fast and just hitting the JSONDecodeError
-            try:
-                self.client.send(bytes(json.dumps(self.out_data), 'utf-8'))
-            except socket.timeout or ConnectionError:
-                print('conn error')
-            # it's ok for this to block because the arduino can't handle more writes than reads to it
-            try:
-                r = json.loads(self.file.readline())
-                self.in_data = r
-                self._status = CONNECTED
-                self.status_color = GREEN
-                self.available = True
-            except json.decoder.JSONDecodeError:
-                self._status = ERROR
-                self.status_color = RED
-                print('json error')
-
-            self.times[time.time()] = time.time() - (self.in_data["time"] / 100 + self.t0)
+                self.times[time.time()] = time.time() - (self.in_data["time"] / 100 + self.t0)
 
     # this should be called regularly as it not only clears the times buffer but checks that the socket is not hanging
     def get_rate(self) -> float:
@@ -126,7 +122,7 @@ class ArduinoStreamHandler(Thread):
             self.file.close()
 
         self._status = TERMINATED
-        self.status_color = BLUE
+        self.status_color = RED
 
 
 class VideoStreamHandler(Thread):
@@ -135,7 +131,7 @@ class VideoStreamHandler(Thread):
         self.cap = None
         self.width = 300
         self.height = 150
-        self.terminated = False
+        self.terminated = Event()
         self._frame = np.zeros((self.height, self.width, 3), dtype='uint8')
         cv2.putText(self._frame, 'NO SIGNAL', (self.width // 2 - 80, self.height // 2), cv2.FONT_HERSHEY_SIMPLEX, 1,
                     (255, 255, 255), 2)
@@ -155,7 +151,7 @@ class VideoStreamHandler(Thread):
         self.status_color = GREEN
 
     def run(self) -> None:
-        while not self.terminated:
+        while not self.terminated.is_set():
 
             if self.cap is None:
                 self.connect()
@@ -182,30 +178,33 @@ class VideoStreamHandler(Thread):
 
     def get_rate(self) -> float:
         self.times = [t for t in self.times if (time.time() - t) < 5]
-        if len(self.times)>1:
+        if len(self.times) > 1:
             return 1 / np.mean(np.diff(self.times))  # return calc fps
         else:
             return 0
 
     @property
     def status(self) -> str:
+        # pretty print connecting with a spinner
         if self._status == CONNECTING:
             return f'{CONNECTING} {spinner()}'
         else:
             return self._status
 
     def terminate(self):
-        self.terminated = True
+        self._status = TERMINATED
+        self.status_color = RED
+        self.terminated.set()
 
 
 def spinner() -> int:
     t = time.time() % 1
 
     if t < 0.25:
-        return 1
+        return '\u2502'
     elif t < 0.5:
-        return 0
+        return '\u2571'
     elif t < 0.75:
-        return 1
+        return '\u2500'
     else:
-        return 0
+        return '\u2572'

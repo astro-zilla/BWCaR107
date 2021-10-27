@@ -81,7 +81,7 @@ def find_block(img):
         return False
     else:
         position_block = np.asarray(get_centroid(contours, im))
-        print(position_block)
+        # print(position_block)
         cv2.imshow("block", im)
     return position_block
 
@@ -99,6 +99,7 @@ def find_starting_square(frame_copy):
     contours = get_main_contours(mask_line)
     # get centroid of the square
     centroid = np.asarray(get_centroid(contours, im))
+
 
     return centroid
 

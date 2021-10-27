@@ -5,6 +5,9 @@
 #define motorPinL 3
 #define motorPinR 4
 #define magnetometerPin A0
+#define movingLedPin 5
+#define metalLedPin 6
+#define nonMetalLedPin 7
 
 #include <WiFiNINA.h>
 #include <ArduinoJson.h>
@@ -20,7 +23,7 @@ char identity[] = SECRET_IDENTITY;
 
 int keyIndex = 0;                       // your network key index number (needed only for WEP)
 
-IPAddress server(10,248,152,107);
+IPAddress server(10,9,42,235);
 int port = 53282;
 
 // wifi setup
@@ -50,6 +53,10 @@ Adafruit_DCMotor *motor_R = AFMS.getMotor(motorPinR);
 
 Servo servo_0;
 Servo servo_1;
+
+int movingLed = LOW;
+int metalLed = LOW;
+int nonMetalLed = LOW;
 
 DynamicJsonDocument daedalus(256);
 
@@ -83,7 +90,7 @@ int ping(int trigger, int echo) {
     delayMicroseconds(10);
     digitalWrite(trigger, LOW);
 
-    return pulseIn(echo, HIGH) * 0.034 / 2;
+    return pulseIn(echo, HIGH, 3000) * 0.034 / 2;
 }
 
 void reconnect() {
@@ -92,6 +99,10 @@ void reconnect() {
         Serial.print("connected to: ");
         Serial.println(server);
     }
+}
+
+int flash(int freq) {
+    return round((float)((millis()*freq)%1000)/1000.0);
 }
 
 void setup() {
@@ -117,6 +128,10 @@ void setup() {
 
     pinMode(trigPin, OUTPUT);
     pinMode(echoPin, INPUT);
+
+    pinMode(movingLedPin, OUTPUT);
+    pinMode(metalLedPin, OUTPUT);
+    pinMode(nonMetalLedPin, OUTPUT);
 
     // check for the WiFi module: ###REMOVE BEFORE FIRE###
     if (WiFi.status() == WL_NO_MODULE) {
@@ -155,10 +170,6 @@ void setup() {
 }
 
 void loop() {
-    //start 3 second timeout
-
-    // TIMER IE DOES NOT WORK --- 2:30AM ELLIS SAYS USE AN EXTERNAL RC CIRCUIT OR 555 TIMER AS AN EXTERNAL IE
-
     // deserialise JSON data over WiFi from Daedalus on controller
     while (client.available()) {
 
@@ -167,7 +178,8 @@ void loop() {
             Serial.print("DeserializationError");
         }
     }
-
+    serializeJson(daedalus,Serial);
+    Serial.print("\n");
 
     time = daedalus["time"];
 
@@ -176,9 +188,30 @@ void loop() {
     angle_0 = daedalus["servos"][0];
     angle_1 = daedalus["servos"][1];
 
+    movingLed = daedalus["LEDs"][0];
+    metalLed = daedalus["LEDs"][1];
+    nonMetalLed = daedalus["LEDs"][2];
+
     // write servo angles: todo in steps of 1 deg
-    servo_0.write(angle_0);
-    servo_1.write(angle_1);
+
+    int min0=servo_0.read()-1;
+    int max0=min0+2;
+    int min1=servo_0.read()-1;
+    int max1=min1+2;
+
+    servo_0.write(constrain(angle_0,min0,max0));
+    servo_1.write(constrain(angle_1,min1,max1));
+
+    Serial.print(angle_0);
+    Serial.print(' ');
+    Serial.print(min0);
+    Serial.print(' ');
+    Serial.println(max0);
+    Serial.println(constrain(angle_0,min0,max0));
+
+    digitalWrite(movingLedPin,movingLed*flash(2));
+    digitalWrite(metalLedPin,metalLed);
+    digitalWrite(nonMetalLedPin,nonMetalLed);
 
     //use bit manipulation here for better code
     motor_L->setSpeed(abs(L_speed));
@@ -197,8 +230,8 @@ void loop() {
     }
 
     // get sensor data
-    ultrasonic = 0; // ping(trigPin,echoPin);
-    magnetometer = 0; // analogRead(magnetometerPin);
+    ultrasonic = ping(trigPin,echoPin);
+    magnetometer = analogRead(magnetometerPin);
 
     // create JSON object for sensor data
     DynamicJsonDocument theseus(256);

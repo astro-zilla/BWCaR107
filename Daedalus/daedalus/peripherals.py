@@ -16,6 +16,7 @@ class Buffer:
 
     def flush(self):
         self.data = []
+        self.sum = 0
 
     def is_full(self):
         if len(self.data) == self.windowlen:
@@ -27,7 +28,10 @@ class Buffer:
         return self.data
 
     def get_mean(self):
-        return self.sum / len(self.data)
+        if self.sum == 0:
+            return 0
+        else:
+            return self.sum / len(self.data)
 
 
 def flash(freq):
