@@ -3,7 +3,7 @@ import numpy as np
 from daedalus.streaming import VideoStreamHandler
 from daedalus.Image import undistort, square
 from daedalus.colour_tracker import thinning_algorithm
-from daedalus.navigation import angle_finder, get_main_contours, get_centroid
+from daedalus.navigation import angle_finder, get_main_contours, get_centroid, find_block
 from daedalus.aruco import analyse
 
 
@@ -19,10 +19,9 @@ def main():
         frame = square(frame)
         frame_copy = frame.copy()
         # frame of the starting square
-        frame_copy = frame_copy[:200,600:]
+        frame_copy = frame_copy[380:, :280]
         cv2.imshow("cropped", frame_copy)
         cv2.imshow("frame", frame)
-
         # use HSV colour system for detection
         imgHSV = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
         imgHSV1 = cv2.cvtColor(frame_copy, cv2.COLOR_BGR2HSV)
@@ -43,8 +42,8 @@ def main():
             cv2.rectangle(mask_line, (x,y), (x+w,y+h), (255,255,255), 9)
 
 
-        cv2.imshow("canny", mask_line_canny)
-        cv2.imshow("mask_line", mask_line)
+        #cv2.imshow("canny", mask_line_canny)
+        #cv2.imshow("mask_line", mask_line)
         # values for blocks mask (whether red top or blue top)
         lower_block = np.array([90, 107, 123])
         upper_block = np.array([179, 255, 255])
@@ -145,13 +144,8 @@ def main():
                     #print("Go straight")'''
             pass
 
-        im3 = np.zeros(mask_block.shape, "uint8")
-        contours3 = get_main_contours(mask_block, 100, 300)
-        if len(contours3) == 0:
-            pass
-        else:
-            position_blocks = get_centroid(contours3, im3)
-
+        find_block(frame)
+        print(frame.shape)
 
 
 

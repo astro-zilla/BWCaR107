@@ -242,7 +242,7 @@ def main(screen: curses.window = curses.initscr(), robot_aruco_id: int = 7):
             frame = undistort(frame1, balance=0.5)
             frame = square(frame)
 
-            b = find_block(frame)
+            b = find_block(frame) # consider inputting just collection area part of the frame
             if b:
                 block = b
 
