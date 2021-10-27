@@ -130,5 +130,8 @@ dmypy.json
 
 # PyCharm
 .idea/
-tunnel.bat
+img/
 Theseus/z_secrets.h
+Daedalus/screenshots/
+tunnel.bat
+daedalus.bat

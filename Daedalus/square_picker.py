@@ -30,20 +30,21 @@ def main():
     cv2.namedWindow('frame_ext')
     cv2.setMouseCallback('frame_ext', draw_circle)
 
+
     while True:
         frame = video_stream.frame
-        frame = undistort(frame, balance=0.5)
-        frame_ext = cv2.copyMakeBorder(frame, 0, 100, 0, 0, cv2.BORDER_CONSTANT, value=(0, 0, 0))
-        frame = square(frame, np.float32(points))
+        undistorted = undistort(frame, balance=0.5)
+        frame_ext = cv2.copyMakeBorder(undistorted, 0, 100, 0, 0, cv2.BORDER_CONSTANT, value=(0, 0, 0))
+        frame_sq = square(undistorted, np.float32(points))
 
-        for point in points:
+        for point in list(points):
             cv2.circle(frame_ext, point, 3, (255, 255, 255), -1)
 
         for i in range(len(points) - 1):
             cv2.line(frame_ext, points[i][:], points[i + 1][:], (255, 255, 255), 1)
 
         cv2.imshow('frame_ext', frame_ext)
-        cv2.imshow('frame', frame)
+        cv2.imshow('frame', frame_sq)
 
         k = cv2.waitKey(20)
         if k == ord('q'):

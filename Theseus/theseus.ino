@@ -1,3 +1,11 @@
+#define echoPin 2
+#define trigPin 3
+#define servoPin0 9
+#define servoPin1 10
+#define motorPinL 3
+#define motorPinR 4
+#define magnetometerPin A0
+
 #include <WiFiNINA.h>
 #include <ArduinoJson.h>
 #include <Adafruit_MotorShield.h>
@@ -12,7 +20,7 @@ char identity[] = SECRET_IDENTITY;
 
 int keyIndex = 0;                       // your network key index number (needed only for WEP)
 
-IPAddress server(10,9,42,235);
+IPAddress server(10,248,152,107);
 int port = 53282;
 
 // wifi setup
@@ -28,16 +36,20 @@ int L_speed;
 int R_speed;
 
 // servo angles
-int pincer_ang;
-int arm_ang;
+int angle_0;
+int angle_1;
+
+// sensor data
+int ultrasonic;
+int magnetometer;
 
 // motor stuff
 Adafruit_MotorShield AFMS = Adafruit_MotorShield();
-Adafruit_DCMotor *motor_L = AFMS.getMotor(3);
-Adafruit_DCMotor *motor_R = AFMS.getMotor(4);
+Adafruit_DCMotor *motor_L = AFMS.getMotor(motorPinL);
+Adafruit_DCMotor *motor_R = AFMS.getMotor(motorPinR);
 
-Servo pincer;
-Servo arm;
+Servo servo_0;
+Servo servo_1;
 
 DynamicJsonDocument daedalus(256);
 
@@ -62,6 +74,16 @@ void printWifiStatus() {
 void test() {
     Serial.println("TESTING");
 
+}
+
+int ping(int trigger, int echo) {
+    digitalWrite(trigger, LOW);
+    delayMicroseconds(2);
+    digitalWrite(trigger, HIGH);
+    delayMicroseconds(10);
+    digitalWrite(trigger, LOW);
+
+    return pulseIn(echo, HIGH) * 0.034 / 2;
 }
 
 void reconnect() {
@@ -90,8 +112,11 @@ void setup() {
     motor_L->run(RELEASE);
     motor_R->run(RELEASE);
 
-    pincer.attach(9,730,3350); // pin,min,max (us pulse)
-    arm.attach(10,730,3350);
+    servo_0.attach(servoPin0,730,3350); // pin,min,max (us pulse)
+    servo_1.attach(servoPin1,730,3350);
+
+    pinMode(trigPin, OUTPUT);
+    pinMode(echoPin, INPUT);
 
     // check for the WiFi module: ###REMOVE BEFORE FIRE###
     if (WiFi.status() == WL_NO_MODULE) {
@@ -148,11 +173,12 @@ void loop() {
 
     L_speed = daedalus["motors"][0];
     R_speed = daedalus["motors"][1];
-    pincer_ang = daedalus["servos"][0];
-    arm_ang = daedalus["servos"][1];
+    angle_0 = daedalus["servos"][0];
+    angle_1 = daedalus["servos"][1];
 
-    pincer.write(pincer_ang); // only steps of 1 deg
-    arm.write(arm_ang);
+    // write servo angles: todo in steps of 1 deg
+    servo_0.write(angle_0);
+    servo_1.write(angle_1);
 
     //use bit manipulation here for better code
     motor_L->setSpeed(abs(L_speed));
@@ -170,18 +196,15 @@ void loop() {
         motor_L->run(BACKWARD);
     }
 
-
-
+    // get sensor data
+    ultrasonic = 0; // ping(trigPin,echoPin);
+    magnetometer = 0; // analogRead(magnetometerPin);
 
     // create JSON object for sensor data
     DynamicJsonDocument theseus(256);
     theseus["time"] = time;
-    theseus["ultrasonic0"] = 0;
-    theseus["ultrasonic0"] = 0;
-    theseus["IR0"] = 0;
-    theseus["IR1"] = 0;
-    theseus["IR2"] = 0;
-    theseus["IR3"] = 0;
+    theseus["ultrasonic"] = ultrasonic;
+    theseus["magnetometer"] = magnetometer;
 
     // output JSON object as string to Daedalus
     serializeJson(theseus,client);

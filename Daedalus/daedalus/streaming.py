@@ -3,7 +3,6 @@ import socket
 import time
 from socket import error as socketError
 from threading import Event, Thread
-from typing import Dict
 
 import cv2
 import numpy as np
@@ -20,6 +19,7 @@ INITIALIZED = 'initialized'
 CONNECTING = 'connecting'
 CONNECTED = 'connected'
 TERMINATED = 'terminated'
+ERROR = 'error'
 
 
 class ArduinoStreamHandler(Thread):
@@ -37,6 +37,7 @@ class ArduinoStreamHandler(Thread):
 
         self._status = INITIALIZED
         self.status_color = BLUE
+        self.available = False
 
         self.t0 = time.time()
         self.times = {}
@@ -50,112 +51,99 @@ class ArduinoStreamHandler(Thread):
             self._status = CONNECTED
             self.status_color = GREEN
             return True
-        except socketError:
+        except socket.timeout or socketError:
             return False
 
     def run(self) -> None:
-        while not self.client:
-            self.connect()
+        while not self.connect():
             if self.terminated.is_set():
                 return
 
         while not self.terminated.is_set():
+
             self.out_data["time"] = int((time.time() - self.t0) * 100)
-            self.client.send(bytes(json.dumps(self.out_data), 'utf-8'))
+            # try loop is new: if client is reset to None, expected behaiviour is a fail by ConnectionResetError
+            # todo check is the old setup was running this loop really fast and just hitting the JSONDecodeError
+            try:
+                self.client.send(bytes(json.dumps(self.out_data), 'utf-8'))
+            except socket.timeout or ConnectionError:
+                print('conn error')
             # it's ok for this to block because the arduino can't handle more writes than reads to it
             try:
                 r = json.loads(self.file.readline())
                 self.in_data = r
+                self._status = CONNECTED
+                self.status_color = GREEN
+                self.available = True
             except json.decoder.JSONDecodeError:
-                pass
+                self._status = ERROR
+                self.status_color = RED
+                print('json error')
 
             self.times[time.time()] = time.time() - (self.in_data["time"] / 100 + self.t0)
 
+    # this should be called regularly as it not only clears the times buffer but checks that the socket is not hanging
     def get_rate(self) -> float:
 
         self.times = {t: p for (t, p) in self.times.items() if (time.time() - t) < 5}
 
+        # we have recieved a packet in the last 5 seconds
         if self.times:
             ping = 1000 * np.mean(list(self.times.values()))
             if ping < 0 or ping > 5000:
                 ping = np.nan
             return ping
+        # we have not recieved anything in the last 5 seconds: reconnect
         else:
-            self.reconnect()
             return 0
 
     @property
     def status(self) -> str:
+        # pretty print connecting with a spinner
         if self._status == CONNECTING:
             return f'{CONNECTING} {spinner()}'
         else:
             return self._status
 
     def reconnect(self) -> None:
-        pass
+        # not used: could be used to implement a non-blocking manual reconnect if the mainloop error catch doesnt work
+        Thread(target=self.connect).start()
 
     def read(self) -> dict:
+        # return last data read
+        self.available = False
         return self.in_data
 
     def write(self, data: dict) -> None:
+        # set data to be output
         self.out_data = data
 
     def terminate(self) -> None:
+        # graceful termination of all objects, and the thread (may block for a while)
         self.terminated.set()
         if self.client:
             self.client.close()
+            self.file.close()
 
-        self.server.close()
         self._status = TERMINATED
         self.status_color = BLUE
 
 
-class StreamReader(Thread):
-    def __init__(self, client):
-        super().__init__()
-        self.data = b''
-        self.file = client.makefile()
-
-        self.ready = Event()
-        self.terminated = Event()
-
-    def run(self) -> None:
-        while not self.terminated.is_set():
-            self.ready.wait(5)
-            self.data = self.file.readline()
-            self.ready.clear()
-
-
-class StreamWriter(Thread):
-    def __init__(self, client, data):
-        super().__init__()
-        self.client = client
-        self.data = data
-
-        self.ready = Event()
-        self.terminated = Event()
-
-    def run(self):
-        while not self.terminated.is_set():
-            self.ready.wait(5)
-            self.client.send(self.data)
-            self.ready.clear()
-
-
 class VideoStreamHandler(Thread):
-    def __init__(self, source:str):
+    def __init__(self, source: str):
         super().__init__()
         self.cap = None
         self.width = 300
         self.height = 150
         self.terminated = False
-        self.frame = np.zeros((self.height, self.width, 3), dtype='uint8')
-        cv2.putText(self.frame, 'NO SIGNAL', (self.width // 2 - 80, self.height // 2), cv2.FONT_HERSHEY_SIMPLEX, 1,
+        self._frame = np.zeros((self.height, self.width, 3), dtype='uint8')
+        cv2.putText(self._frame, 'NO SIGNAL', (self.width // 2 - 80, self.height // 2), cv2.FONT_HERSHEY_SIMPLEX, 1,
                     (255, 255, 255), 2)
         self.times = []
         self.source = source
         self._status = INITIALIZED
         self.status_color = BLUE
+        self.available = False
 
     def connect(self) -> None:
         self._status = CONNECTING
@@ -173,12 +161,13 @@ class VideoStreamHandler(Thread):
                 self.connect()
             ret, frame = self.cap.read()  # read frame from stream (blocking)
             if frame is not None and frame.shape != (0, 0, 3):
-                self.frame = frame
+                self._frame = frame
                 self.times.append(time.time())
+                self.available = True
             else:
                 self.cap.release()
-                self.frame = np.zeros((150, 300, 3), dtype='uint8')
-                cv2.putText(self.frame, 'NO SIGNAL', (300 // 2 - 80, 150 // 2), cv2.FONT_HERSHEY_SIMPLEX, 1,
+                self._frame = np.zeros((150, 300, 3), dtype='uint8')
+                cv2.putText(self._frame, 'NO SIGNAL', (300 // 2 - 80, 150 // 2), cv2.FONT_HERSHEY_SIMPLEX, 1,
                             (255, 255, 255), 2)
                 self.connect()
 
@@ -186,9 +175,14 @@ class VideoStreamHandler(Thread):
         self._status = TERMINATED
         self.status_color = BLUE
 
+    @property
+    def frame(self):
+        self.available = False
+        return self._frame
+
     def get_rate(self) -> float:
         self.times = [t for t in self.times if (time.time() - t) < 5]
-        if self.times:
+        if len(self.times)>1:
             return 1 / np.mean(np.diff(self.times))  # return calc fps
         else:
             return 0
