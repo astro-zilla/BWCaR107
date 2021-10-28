@@ -197,7 +197,7 @@ class VideoStreamHandler(Thread):
         self.terminated.set()
 
 
-def spinner() -> int:
+def spinner() -> str:
     t = time.time() % 1
 
     if t < 0.25:

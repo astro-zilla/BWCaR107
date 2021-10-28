@@ -7,7 +7,7 @@ D = 1.1 * np.array([[-0.16047886876042616], [0.5186348922845948], [-1.0904314778
 from_pts_default = np.float32([[154, 713], [225, 68], [862, 104], [832, 783]])
 
 
-def undistort(img, balance=0.0, dim2=None, dim3=None):
+def undistort(img, balance=0.0):
     dim1 = img.shape[:2][::-1]  # dim1 is the dimension of input image to un-distort
     if dim1[0] / dim1[1] != DIM[0] / DIM[1]:
         cv2.resize(img, DIM)

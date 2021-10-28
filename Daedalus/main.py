@@ -11,7 +11,7 @@ from Daedalus.daedalus.peripherals import Buffer
 from daedalus.Image import square, undistort
 from daedalus.aruco import analyse
 from daedalus.navigation import find_block, get_angle
-from daedalus.streaming import ArduinoStreamHandler, TERMINATED, VideoStreamHandler
+from daedalus.streaming import ArduinoStreamHandler, VideoStreamHandler
 
 # global vars for callback
 mouse_pos = np.int32([678, 86])
@@ -20,6 +20,8 @@ out = [array([680, 80]), array([547, 218]), array([500, 266]), array([274, 492])
 back = [array([178, 587]), array([274, 494]), array([500, 266])]
 blue = [array([612, 283]), array([551, 222]), array([495, 169])]
 red = [array([477, 149]), array([548, 218]), array([597, 267])]
+back_red = [array([161, 607]), array([215, 553]), array([266, 503]), array([495, 272]), array([488, 215]), array([558, 252])]
+home = [array([511, 256]), array([559, 206]), array([602, 162]), array([689, 74])]
 
 waypoints = out.copy()
 
@@ -31,10 +33,15 @@ key_q = KeyCode.from_char('q')
 key_r = KeyCode.from_char('r')
 key_f = KeyCode.from_char('f')
 
+key_t = KeyCode.from_char('t')
+key_g = KeyCode.from_char('g')
+
 key_i = KeyCode.from_char('i')
 key_w = KeyCode.from_char('w')
 key_p = KeyCode.from_char('p')
 key_d = KeyCode.from_char('d')
+
+key_n = KeyCode.from_char('n')
 
 key_1 = KeyCode.from_char('1')
 key_2 = KeyCode.from_char('2')
@@ -61,6 +68,7 @@ IDLE = 'idle'
 WAYPOINTS = 'waypoints'
 POSITIONING = 'positioning'
 DETECT = 'detecting'
+DROP = 'dropping'
 
 
 def mouse(event: int, x: float, y: float, flags, params):
@@ -79,10 +87,10 @@ def on_press(key):
 
 
 def arr_output(arr):
-    out = ''
+    o = ''
     for item in arr:
-        out += f'{item}, '
-    return out
+        o += f'{item}, '
+    return o
 
 
 def on_release(key):
@@ -183,7 +191,7 @@ def main(screen: curses.window = curses.initscr(), robot_aruco_id: int = 7):
     server.listen()
 
     # logfile
-    with open('daedalus.log','w+'):
+    with open('daedalus.log', 'w+'):
         pass
 
     # init asynchronous "threading" stream handlers
@@ -226,7 +234,6 @@ def main(screen: curses.window = curses.initscr(), robot_aruco_id: int = 7):
     status_color = RED
     ctrl_state = IDLE
     next_state = POSITIONING
-    t_detect = 0
 
     # frame ids
     f_num = 1.
@@ -259,8 +266,8 @@ def main(screen: curses.window = curses.initscr(), robot_aruco_id: int = 7):
             frame = undistort(frame1, balance=0.5)
             frame = square(frame)
 
-            b = find_block(frame) # consider inputting just collection area part of the frame
-            if b is not False:
+            b = find_block(frame)
+            if b is not False and ctrl_state != DETECT:
                 block = b
 
             f_num = time.time()
@@ -292,9 +299,9 @@ def main(screen: curses.window = curses.initscr(), robot_aruco_id: int = 7):
 
         # servo debug inputs r and f
         if key_r in keys:
-            data["servos"][0] += 1
+            data["servos"] -= 1
         if key_f in keys:
-            data["servos"][0] -= 1
+            data["servos"] += 1
 
         # debug control state
         if key_i in keys:
@@ -306,6 +313,8 @@ def main(screen: curses.window = curses.initscr(), robot_aruco_id: int = 7):
         elif key_d in keys:
             ctrl_state = DETECT
             magnetometer.flush()
+        if key_n in keys:
+            ctrl_state = next_state
 
         # debug waypoint presets
         if key_1 in keys:
@@ -321,6 +330,7 @@ def main(screen: curses.window = curses.initscr(), robot_aruco_id: int = 7):
         # control AI
 
         dist = 0
+        data["LEDs"] = [0, 0, 0]
         if ctrl_state == IDLE:
             motorspeed = [0, 0]
         elif ctrl_state == WAYPOINTS:
@@ -364,22 +374,36 @@ def main(screen: curses.window = curses.initscr(), robot_aruco_id: int = 7):
             pos0, head0, t0 = positions[-2]
             ang = get_angle(pos, head, block)
             ang0 = get_angle(pos0, head0, block)
-            motorspeed = np.clip([5*ang,-5*ang],-100,100)
+            motorspeed = np.clip([5 * ang, -5 * ang], -100, 100)
             if abs(ang) < 5 and abs(ang - ang0) / (t - t0) < 1:
+                if np.linalg.norm(block - positions[-1][0]) > 70:  # todo tune this
+                    motorspeed = [100, 100]
                 ctrl_state = DETECT
                 magnetometer.flush()
 
         # move forwards and
         elif ctrl_state == DETECT:
-            if magnetometer.is_full():
-                before = magnetometer.get_mean()
-                block_persistent = block
-            data["servos"] = [180,180]
-            waypoints = back.copy()
-            ctrl_state = WAYPOINTS
-            next_state = IDLE
+            motorspeed = [0, 0]
+            if arduinodata["servos"] > 15:
+                data["servos"] = 10
+            else:
+                data["LEDs"][1] = 1
+                waypoints = back_red.copy()
+                ctrl_state = WAYPOINTS
+                next_state = DROP
 
-            pos, head, t = positions[-1]
+        elif ctrl_state == DROP:
+            motorspeed = [0, 0]
+            if arduinodata["servos"] < 170:
+                data["servos"] = 180
+            elif np.linalg.norm(waypoints[0] - positions[-1][0]) < 100:  # todo tune this
+                motorspeed = [-100, -100]
+                data["servos"] = 120
+            else:
+                data["servos"] = 0
+                waypoints = home.copy()
+                ctrl_state = WAYPOINTS
+                next_state = IDLE
 
         # draw waypoints
         for i in range(len(waypoints) - 1):
@@ -392,7 +416,7 @@ def main(screen: curses.window = curses.initscr(), robot_aruco_id: int = 7):
 
         # write motor data
         data["motors"] = list(np.clip(motorspeed, -255, 255))
-        data["LEDs"] = [0, 0, 0]
+
         if data["motors"] != [0, 0]:
             data["LEDs"][0] = 1
         else:
@@ -446,7 +470,7 @@ if __name__ == "__main__":
     data = {
         "time": 0,
         "motors": [0, 0],
-        "servos": [0, 0],
+        "servos": 180,
         "LEDs": [0, 0, 0, 0]
     }
     curses.wrapper(main)

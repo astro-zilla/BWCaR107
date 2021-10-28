@@ -3,7 +3,6 @@ import numpy as np
 
 
 def customizable_mask(img):
-
     def empty(x):
         pass
 
@@ -39,7 +38,6 @@ def customizable_mask(img):
 
 
 def thinning_algorithm(img):
-
     # Create a kernel to perform erosion and dilation
     kernel = cv2.getStructuringElement(cv2.MORPH_CROSS, (3, 3))
     # Create an empty skeleton where to store values progressively

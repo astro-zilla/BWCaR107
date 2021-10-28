@@ -175,7 +175,7 @@ void loop() {
 
         DeserializationError error = deserializeJson(daedalus, client);
         if (error){
-            Serial.print("DeserializationError");
+            Serial.println("DeserializationError");
         }
     }
     serializeJson(daedalus,Serial);
@@ -185,8 +185,8 @@ void loop() {
 
     L_speed = daedalus["motors"][0];
     R_speed = daedalus["motors"][1];
-    angle_0 = daedalus["servos"][0];
-    angle_1 = daedalus["servos"][1];
+    angle_0 = daedalus["servos"];
+    angle_1 = 180-angle_0;
 
     movingLed = daedalus["LEDs"][0];
     metalLed = daedalus["LEDs"][1];
@@ -194,20 +194,13 @@ void loop() {
 
     // write servo angles: todo in steps of 1 deg
 
-    int min0=servo_0.read()-1;
-    int max0=min0+2;
-    int min1=servo_0.read()-1;
-    int max1=min1+2;
+    int min0 = servo_0.read()-3;
+    int max0 = min0+6;
+    int min1 = (180-servo_0.read())+3;
+    int max1 = min1-6;
 
     servo_0.write(constrain(angle_0,min0,max0));
     servo_1.write(constrain(angle_1,min1,max1));
-
-    Serial.print(angle_0);
-    Serial.print(' ');
-    Serial.print(min0);
-    Serial.print(' ');
-    Serial.println(max0);
-    Serial.println(constrain(angle_0,min0,max0));
 
     digitalWrite(movingLedPin,movingLed*flash(2));
     digitalWrite(metalLedPin,metalLed);
@@ -238,6 +231,7 @@ void loop() {
     theseus["time"] = time;
     theseus["ultrasonic"] = ultrasonic;
     theseus["magnetometer"] = magnetometer;
+    theseus["servos"] = servo_0.read();
 
     // output JSON object as string to Daedalus
     serializeJson(theseus,client);

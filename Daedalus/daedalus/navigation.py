@@ -1,5 +1,4 @@
 from dataclasses import dataclass
-from typing import Union
 
 import cv2
 import numpy as np
@@ -31,7 +30,7 @@ def get_centroid(contours, img):
     # calculate x,y coordinate of center
     cx = int(M["m10"] / M["m00"])
     cy = int(M["m01"] / M["m00"])
-    cv2.circle(img, (cx, cy), 5, (255, 255, 255), -1)
+    cv2.circle(img, (cx, cy), 5, (255, 255, 0), -1)
     position = (cx, cy)
 
     return position
@@ -67,7 +66,8 @@ def find_block(img):
     # make sure to use a cropped frame not to detect any blocks that have already been placed
     # turn the image into HSV for colour detection
     imgHSV = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
-    imgHSV[:380, 280:, :] = 0
+    imgHSV[:500, :, :] = 0
+    imgHSV[:, 200:, :] = 0
 
     # values for blocks mask (whether red top or blue top)
     lower_block = np.array([90, 107, 123])
@@ -76,13 +76,14 @@ def find_block(img):
 
     # create matrix to store contours and centroid of the block
     im = np.zeros(mask_block.shape, "uint8")
-    contours = get_main_contours(mask_block, 100, 300)
+    contours = get_main_contours(mask_block, 1, 30)
+    # todo need blob finding here not contour finding
     if len(contours) == 0:
         return False
     else:
         position_block = np.asarray(get_centroid(contours, im))
-        # print(position_block)
-        cv2.imshow("block", im)
+
+    # cv2.imshow("block", mask_block)
     return position_block
 
 
@@ -99,7 +100,6 @@ def find_starting_square(frame_copy):
     contours = get_main_contours(mask_line)
     # get centroid of the square
     centroid = np.asarray(get_centroid(contours, im))
-
 
     return centroid
 
