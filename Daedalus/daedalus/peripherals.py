@@ -6,6 +6,7 @@ class Buffer:
         self.windowlen = windowlen
         self.data = []
         self.sum = 0
+        self.means = {}
 
     def push(self, newvalue):
         self.data.append(newvalue)
@@ -32,6 +33,12 @@ class Buffer:
             return 0
         else:
             return self.sum / len(self.data)
+
+    def save_mean(self, key):
+        self.means[key] = self.get_mean()
+
+    def retrieve_mean(self, key):
+        return self.means[key]
 
 
 def flash(freq):

@@ -123,6 +123,7 @@ void setup() {
     motor_L->run(RELEASE);
     motor_R->run(RELEASE);
 
+    pinMode(8, INPUT); // 8 is externally driven by 10~, as the servo header is connected to 8, but 8 is not PWM-enabled
     servo_0.attach(servoPin0,730,3350); // pin,min,max (us pulse)
     servo_1.attach(servoPin1,730,3350);
 

@@ -76,7 +76,7 @@ def find_block(img):
 
     # create matrix to store contours and centroid of the block
     im = np.zeros(mask_block.shape, "uint8")
-    contours = get_main_contours(mask_block, 1, 30)
+    contours = get_main_contours(mask_block, 50, 250)
     # todo need blob finding here not contour finding
     if len(contours) == 0:
         return False

@@ -5,9 +5,9 @@ import time
 import cv2
 import numpy as np
 from numpy import array
-from pynput.keyboard import KeyCode, Listener
+from pynput.keyboard import Key, KeyCode, Listener
 
-from Daedalus.daedalus.peripherals import Buffer
+from daedalus.peripherals import Buffer
 from daedalus.Image import square, undistort
 from daedalus.aruco import analyse
 from daedalus.navigation import find_block, get_angle
@@ -16,12 +16,14 @@ from daedalus.streaming import ArduinoStreamHandler, VideoStreamHandler
 # global vars for callback
 mouse_pos = np.int32([678, 86])
 
-out = [array([680, 80]), array([547, 218]), array([500, 266]), array([274, 492]), array([140, 624])]
+out = [array([680, 80]), array([547, 218]), array([500, 266]), array([274, 492]), array([237, 529]), array([177, 587])]
 back = [array([178, 587]), array([274, 494]), array([500, 266])]
 blue = [array([612, 283]), array([551, 222]), array([495, 169])]
 red = [array([477, 149]), array([548, 218]), array([597, 267])]
-back_red = [array([161, 607]), array([215, 553]), array([266, 503]), array([495, 272]), array([488, 215]), array([558, 252])]
-home = [array([511, 256]), array([559, 206]), array([602, 162]), array([689, 74])]
+back_red = [array([161, 607]), array([215, 553]), array([266, 503]), array([495, 272]), array([488, 215]), array([576, 254])]
+back_blue = [array([159, 602]), array([215, 550]), array([262, 499]), array([493, 268]), array([567, 264]),
+             array([504, 178])]
+home = [array([559, 206]), array([602, 162]), array([689, 74])]
 
 waypoints = out.copy()
 
@@ -30,8 +32,8 @@ keys = set()
 # pynput keycodes
 key_q = KeyCode.from_char('q')
 
-key_r = KeyCode.from_char('r')
-key_f = KeyCode.from_char('f')
+key_c = KeyCode.from_char('c')
+key_o = KeyCode.from_char('o')
 
 key_t = KeyCode.from_char('t')
 key_g = KeyCode.from_char('g')
@@ -42,6 +44,8 @@ key_p = KeyCode.from_char('p')
 key_d = KeyCode.from_char('d')
 
 key_n = KeyCode.from_char('n')
+key_r = KeyCode.from_char('r')
+key_s = KeyCode.from_char('s')
 
 key_1 = KeyCode.from_char('1')
 key_2 = KeyCode.from_char('2')
@@ -69,6 +73,10 @@ WAYPOINTS = 'waypoints'
 POSITIONING = 'positioning'
 DETECT = 'detecting'
 DROP = 'dropping'
+RESTART = 'checking for restart'
+
+# thresholds
+MAGNETOMETER_THRESHOLD = 30
 
 
 def mouse(event: int, x: float, y: float, flags, params):
@@ -101,7 +109,8 @@ def on_release(key):
 
 
 def draw_ui(screen_: curses.window, arduino_stream_: ArduinoStreamHandler, ping_: float, arduinodata_: dict,
-            magnetometer_: Buffer, video_stream_: VideoStreamHandler, fps_: float, status_: str, status_color_: int,
+            magnetometer_: Buffer, video_stream_: VideoStreamHandler, cam_: int, fps_: float, status_: str,
+            status_color_: int,
             tickrate_: float, ctrl_state_: str, distance_: float, speed_: float) -> None:
     screen_.clear()
     # arduino data
@@ -125,7 +134,7 @@ def draw_ui(screen_: curses.window, arduino_stream_: ArduinoStreamHandler, ping_
 
         screen_.addstr(f'\u251c\u2500\u2500')
         screen_.addstr(f'magnetometer: ', curses.color_pair(WHITE))
-        screen_.addstr(f'{magnetometer_.get_mean():.1f} ms\n', curses.color_pair(BLUE))
+        screen_.addstr(f'{magnetometer_.get_mean():.1f}\n', curses.color_pair(BLUE))
 
         screen_.addstr(f'\u2514\u2500\u2500')
         screen_.addstr(f'commands\n', curses.color_pair(WHITE))
@@ -138,7 +147,7 @@ def draw_ui(screen_: curses.window, arduino_stream_: ArduinoStreamHandler, ping_
 
     # video data
     screen_.addstr('Camera: ', curses.color_pair(WHITE))
-    screen_.addstr(f'{video_stream_.status}\n', curses.color_pair(video_stream_.status_color))
+    screen_.addstr(f'idpcam{cam_} {video_stream_.status}\n', curses.color_pair(video_stream_.status_color))
 
     if video_stream_.status == 'connected':
         screen_.addstr(f'\u2514\u2500\u2500')
@@ -178,7 +187,7 @@ def draw_ui(screen_: curses.window, arduino_stream_: ArduinoStreamHandler, ping_
     screen_.refresh()
 
 
-def main(screen: curses.window = curses.initscr(), robot_aruco_id: int = 7):
+def main(screen: curses.window = curses.initscr(), robot_aruco_id: int = 7, cam=1):
     global waypoints
     # broadcast locally on 53282
     host = socket.gethostname()
@@ -195,7 +204,7 @@ def main(screen: curses.window = curses.initscr(), robot_aruco_id: int = 7):
         pass
 
     # init asynchronous "threading" stream handlers
-    video_stream = VideoStreamHandler("http://localhost:8081/stream/video.mjpeg")
+    video_stream = VideoStreamHandler(f"http://localhost:808{cam}/stream/video.mjpeg")
     arduino_stream = ArduinoStreamHandler(server)
     arduino_stream.write(data)
 
@@ -238,6 +247,7 @@ def main(screen: curses.window = curses.initscr(), robot_aruco_id: int = 7):
     # frame ids
     f_num = 1.
     detect_num = 0.
+    tstart = 0
 
     # init stream vals
     frame = video_stream.frame
@@ -246,6 +256,8 @@ def main(screen: curses.window = curses.initscr(), robot_aruco_id: int = 7):
     positions = [([0, 0], [0, 0], 0.), ([0, 0], [0, 0], 1.)]
     speed = 0
     block = np.array([0, 0])
+    blocks_collected = 0
+    time_start = 0
 
     while True:
         # calculate main loop tickrate
@@ -264,10 +276,10 @@ def main(screen: curses.window = curses.initscr(), robot_aruco_id: int = 7):
             frame1 = video_stream.frame
 
             frame = undistort(frame1, balance=0.5)
-            frame = square(frame)
+            frame = square(frame, cam=cam)
 
             b = find_block(frame)
-            if b is not False and ctrl_state != DETECT:
+            if b is not False:
                 block = b
 
             f_num = time.time()
@@ -287,8 +299,12 @@ def main(screen: curses.window = curses.initscr(), robot_aruco_id: int = 7):
 
                 detect_num = f_num
             else:
-                status = MARKER_NOT_FOUND
-                status_color = YELLOW
+                if time.time() - detect_num > 0.2:
+                    status = MARKER_NOT_FOUND
+                    status_color = YELLOW
+                else:
+                    status = TRACKING
+                    status_color = GREEN
 
         # press q key to exit
         if key_q in keys:
@@ -298,10 +314,10 @@ def main(screen: curses.window = curses.initscr(), robot_aruco_id: int = 7):
             break
 
         # servo debug inputs r and f
-        if key_r in keys:
-            data["servos"] -= 1
-        if key_f in keys:
-            data["servos"] += 1
+        if key_c in keys:
+            data["servos"] -= 5
+        if key_o in keys:
+            data["servos"] += 5
 
         # debug control state
         if key_i in keys:
@@ -309,26 +325,47 @@ def main(screen: curses.window = curses.initscr(), robot_aruco_id: int = 7):
         elif key_w in keys:
             ctrl_state = WAYPOINTS
         elif key_p in keys:
+            tstart = time.time()
             ctrl_state = POSITIONING
         elif key_d in keys:
             ctrl_state = DETECT
             magnetometer.flush()
+
+        # next waypoint
         if key_n in keys:
             ctrl_state = next_state
+        # start run
+        elif key_s in keys:
+            blocks_collected = 0
+            time_start = time.time()
+            ctrl_state = RESTART
+            # restart run (keep collected blocks and start time same)
+        elif key_r in keys:
+            ctrl_state = RESTART
 
         # debug waypoint presets
         if key_1 in keys:
             waypoints = out.copy()
             next_state = POSITIONING
         elif key_2 in keys:
-            waypoints = back.copy()
+            waypoints = back_red.copy()
+            next_state = DROP
         elif key_3 in keys:
             waypoints = blue.copy()
         elif key_4 in keys:
             waypoints = red.copy()
 
-        # control AI
+        # change camera stream
+        if Key.right in keys:
+            cam = 2
+            video_stream.cap = None
+            video_stream.source = f"http://localhost:808{2}/stream/video.mjpeg"
+        elif Key.left in keys:
+            cam = 1
+            video_stream.cap = None
+            video_stream.source = f"http://localhost:808{1}/stream/video.mjpeg"
 
+        # control AI
         dist = 0
         data["LEDs"] = [0, 0, 0]
         if ctrl_state == IDLE:
@@ -346,8 +383,8 @@ def main(screen: curses.window = curses.initscr(), robot_aruco_id: int = 7):
 
                 # calculate absolute speed
 
-                s = np.clip(1.5 * ang, -180, 180)
-                d = np.clip(dist / 100, 0.5, 1)
+                s = np.clip(5 * ang, -200, 200)
+                d = 1  # np.clip(dist / 20, 0.5, 1)
 
                 if dist < 30:
                     if len(waypoints) > 1:
@@ -355,68 +392,99 @@ def main(screen: curses.window = curses.initscr(), robot_aruco_id: int = 7):
                         positions = positions[-2:]
                     else:
                         motorspeed = [0.0, 0.0]
+                        tstart = time.time()
                         ctrl_state = next_state
                 elif abs(ang) < 90:
-                    e = (30. - speed)
-                    m = 180 + 2 * e
+                    e = (50. - speed)
+                    m = 200 + 1.5 * e
 
                     motorspeed = [d * m * np.cos(ang * np.pi / 180) + s, d * m * np.cos(ang * np.pi / 180) - s]
 
                 else:
                     motorspeed = [s, -s]
             else:
-                motorspeed = [motorspeed[0] * 0.9, motorspeed[1] * 0.9]
+                motorspeed = [motorspeed[0] * 0.99, motorspeed[1] * 0.99]
                 dist = 0
                 speed = 0
 
         elif ctrl_state == POSITIONING:
+            data["servos"] = 180
             pos, head, t = positions[-1]
             pos0, head0, t0 = positions[-2]
             ang = get_angle(pos, head, block)
             ang0 = get_angle(pos0, head0, block)
-            motorspeed = np.clip([5 * ang, -5 * ang], -100, 100)
-            if abs(ang) < 5 and abs(ang - ang0) / (t - t0) < 1:
-                if np.linalg.norm(block - positions[-1][0]) > 70:  # todo tune this
-                    motorspeed = [100, 100]
-                ctrl_state = DETECT
-                magnetometer.flush()
+            motorspeed = np.clip([20 * ang, -20 * ang], -110, 110)
+            if (abs(ang) < 5 and abs(ang - ang0) / (t - t0) < 5) or (time.time() - tstart) > 20:
+                if np.linalg.norm(block - positions[-1][0]) > 50 and (time.time() - tstart) < 21:  # todo tune distance reqd.
+                    motorspeed[:] += 150
+                else:
+                    ctrl_state = DETECT
+                    magnetometer.flush()
 
         # move forwards and
         elif ctrl_state == DETECT:
             motorspeed = [0, 0]
-            if arduinodata["servos"] > 15:
-                data["servos"] = 10
-            else:
-                data["LEDs"][1] = 1
-                waypoints = back_red.copy()
-                ctrl_state = WAYPOINTS
-                next_state = DROP
+            # check if control data has been collected
+            if 'before' in magnetometer.means.keys():
+                # close pincer arms if they are not closed
+                if arduinodata["servos"] > 15:
+                    data["servos"] = 0
+                    magnetometer.flush()
+                # if pincer arms are closed and the buffer has been filled, check for metal and continue
+                elif magnetometer.is_full():
+                    # todo tune threshold
+                    # todo add 5s delay
+                    if abs(magnetometer.get_mean() - magnetometer.retrieve_mean('before')) > MAGNETOMETER_THRESHOLD:
+                        # metal detected
+                        data["LEDs"][1] = 1
+                        waypoints = back_red.copy()
+                    else:
+                        # no metal detected
+                        data["LEDs"][2] = 1
+                        waypoints = back_blue.copy()
+
+                    ctrl_state = WAYPOINTS
+                    next_state = DROP
+            # collect control data
+            elif magnetometer.is_full():
+                magnetometer.save_mean('before')
 
         elif ctrl_state == DROP:
             motorspeed = [0, 0]
-            if arduinodata["servos"] < 170:
+            if arduinodata["servos"] < 120:
                 data["servos"] = 180
-            elif np.linalg.norm(waypoints[0] - positions[-1][0]) < 100:  # todo tune this
-                motorspeed = [-100, -100]
-                data["servos"] = 120
+            elif np.linalg.norm(waypoints[0] - positions[-1][0]) < 100:
+                motorspeed = [-150, -150]
             else:
-                data["servos"] = 0
+                data["servos"] = 10
                 waypoints = home.copy()
+                blocks_collected += 1
                 ctrl_state = WAYPOINTS
-                next_state = IDLE
+                next_state = RESTART
+
+        elif ctrl_state == RESTART:
+            # todo make more efficient: make restart decision before going home after drop
+            magnetometer.means = {}
+            data["LEDs"] = [0, 0, 0]
+            if 300 - (time.time() - time_start) > 90:  # (allowed time) - (runtime) > (lap time) req. for a full run
+                waypoints = out.copy()
+                ctrl_state = WAYPOINTS
+                next_state = POSITIONING
+            else:
+                ctrl_state = IDLE
 
         # draw waypoints
         for i in range(len(waypoints) - 1):
             cv2.line(frame, waypoints[i], waypoints[i + 1], (255, 100, 100), 1)
             cv2.circle(frame, waypoints[i + 1], 3, (100, 100, 255))
+
         # draw block
         cv2.circle(frame, block, 3, (50, 255, 100), -1)
-
-        # flash warning light when moving
 
         # write motor data
         data["motors"] = list(np.clip(motorspeed, -255, 255))
 
+        # flashing LED (0) to display when moving
         if data["motors"] != [0, 0]:
             data["LEDs"][0] = 1
         else:
@@ -430,6 +498,7 @@ def main(screen: curses.window = curses.initscr(), robot_aruco_id: int = 7):
                 arduinodata_=arduinodata,
                 magnetometer_=magnetometer,
                 video_stream_=video_stream,
+                cam_=cam,
                 fps_=fps,
                 status_=status,
                 status_color_=status_color,
@@ -455,6 +524,7 @@ def main(screen: curses.window = curses.initscr(), robot_aruco_id: int = 7):
             arduinodata_=arduinodata,
             magnetometer_=magnetometer,
             video_stream_=video_stream,
+            cam_=0,
             fps_=0,
             status_=status,
             status_color_=status_color,
@@ -470,7 +540,7 @@ if __name__ == "__main__":
     data = {
         "time": 0,
         "motors": [0, 0],
-        "servos": 180,
+        "servos": 0,
         "LEDs": [0, 0, 0, 0]
     }
     curses.wrapper(main)
