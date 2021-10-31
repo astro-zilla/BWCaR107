@@ -63,9 +63,10 @@ def get_angle(position: np.ndarray, heading: np.ndarray, target: np.ndarray) -> 
 
 
 def find_block(img):
-    # make sure to use a cropped frame not to detect any blocks that have already been placed
     # turn the image into HSV for colour detection
     imgHSV = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
+    # todo test this implementation: didnt work last time i tried
+    # imgHSV[:500, 200:, :] = 0
     imgHSV[:500, :, :] = 0
     imgHSV[:, 200:, :] = 0
 
@@ -77,7 +78,6 @@ def find_block(img):
     # create matrix to store contours and centroid of the block
     im = np.zeros(mask_block.shape, "uint8")
     contours = get_main_contours(mask_block, 50, 250)
-    # todo need blob finding here not contour finding
     if len(contours) == 0:
         return False
     else:
