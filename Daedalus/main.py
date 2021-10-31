@@ -16,13 +16,13 @@ from daedalus.streaming import ArduinoStreamHandler, VideoStreamHandler
 # global vars for callback
 mouse_pos = np.int32([678, 86])
 
-out = [array([680, 80]), array([547, 218]), array([500, 266]), array([274, 492]), array([237, 529]), array([177, 587])]
+# waypoint sets
+out = [array([541, 218]), array([495, 263]), array([261, 498]), array([160, 602])]
 back = [array([178, 587]), array([274, 494]), array([500, 266])]
 blue = [array([612, 283]), array([551, 222]), array([495, 169])]
 red = [array([477, 149]), array([548, 218]), array([597, 267])]
 back_red = [array([161, 607]), array([215, 553]), array([266, 503]), array([495, 272]), array([488, 215]), array([576, 254])]
-back_blue = [array([159, 602]), array([215, 550]), array([262, 499]), array([493, 268]), array([567, 264]),
-             array([504, 178])]
+back_blu = [array([159, 602]), array([215, 550]), array([262, 499]), array([493, 268]), array([567, 264]), array([504, 178])]
 home = [array([559, 206]), array([602, 162]), array([689, 74])]
 
 waypoints = out.copy()
@@ -253,11 +253,15 @@ def main(screen: curses.window = curses.initscr(), robot_aruco_id: int = 7, cam=
     frame = video_stream.frame
     arduinodata = arduino_stream.read()
 
+    # init positional data
     positions = [([0, 0], [0, 0], 0.), ([0, 0], [0, 0], 1.)]
     speed = 0
     block = np.array([0, 0])
     blocks_collected = 0
+
+    # init timer vars
     time_start = 0
+    LED_timer = 0
 
     while True:
         # calculate main loop tickrate
@@ -431,7 +435,9 @@ def main(screen: curses.window = curses.initscr(), robot_aruco_id: int = 7, cam=
                     data["servos"] = 0
                     magnetometer.flush()
                 # if pincer arms are closed and the buffer has been filled, check for metal and continue
-                elif magnetometer.is_full():
+                elif not magnetometer.is_full():
+                    LED_timer = time.time()
+                else:
                     # todo tune threshold
                     # todo add 5s delay
                     if abs(magnetometer.get_mean() - magnetometer.retrieve_mean('before')) > MAGNETOMETER_THRESHOLD:
@@ -441,10 +447,12 @@ def main(screen: curses.window = curses.initscr(), robot_aruco_id: int = 7, cam=
                     else:
                         # no metal detected
                         data["LEDs"][2] = 1
-                        waypoints = back_blue.copy()
+                        waypoints = back_blu.copy()
+                    # hold LED high for 5s
+                    if time.time() - LED_timer > 5:
+                        ctrl_state = WAYPOINTS
+                        next_state = DROP
 
-                    ctrl_state = WAYPOINTS
-                    next_state = DROP
             # collect control data
             elif magnetometer.is_full():
                 magnetometer.save_mean('before')
@@ -457,13 +465,10 @@ def main(screen: curses.window = curses.initscr(), robot_aruco_id: int = 7, cam=
                 motorspeed = [-150, -150]
             else:
                 data["servos"] = 10
-                waypoints = home.copy()
                 blocks_collected += 1
-                ctrl_state = WAYPOINTS
-                next_state = RESTART
+                ctrl_state = RESTART
 
         elif ctrl_state == RESTART:
-            # todo make more efficient: make restart decision before going home after drop
             magnetometer.means = {}
             data["LEDs"] = [0, 0, 0]
             if 300 - (time.time() - time_start) > 90:  # (allowed time) - (runtime) > (lap time) req. for a full run
@@ -471,7 +476,9 @@ def main(screen: curses.window = curses.initscr(), robot_aruco_id: int = 7, cam=
                 ctrl_state = WAYPOINTS
                 next_state = POSITIONING
             else:
-                ctrl_state = IDLE
+                waypoints = home.copy()
+                ctrl_state = WAYPOINTS
+                next_state = IDLE
 
         # draw waypoints
         for i in range(len(waypoints) - 1):
