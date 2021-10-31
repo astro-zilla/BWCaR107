@@ -18,9 +18,6 @@ mouse_pos = np.int32([678, 86])
 
 # waypoint sets
 out = [array([541, 218]), array([495, 263]), array([261, 498]), array([160, 602])]
-back = [array([178, 587]), array([274, 494]), array([500, 266])]
-blue = [array([612, 283]), array([551, 222]), array([495, 169])]
-red = [array([477, 149]), array([548, 218]), array([597, 267])]
 back_red = [array([161, 607]), array([215, 553]), array([266, 503]), array([495, 272]), array([488, 215]), array([576, 254])]
 back_blu = [array([159, 602]), array([215, 550]), array([262, 499]), array([493, 268]), array([567, 264]), array([504, 178])]
 home = [array([559, 206]), array([602, 162]), array([689, 74])]
@@ -355,9 +352,11 @@ def main(screen: curses.window = curses.initscr(), robot_aruco_id: int = 7, cam=
             waypoints = back_red.copy()
             next_state = DROP
         elif key_3 in keys:
-            waypoints = blue.copy()
+            waypoints = back_blu.copy()
+            next_state = DROP
         elif key_4 in keys:
-            waypoints = red.copy()
+            waypoints = home.copy()
+            next_state = IDLE
 
         # change camera stream
         if Key.right in keys:
