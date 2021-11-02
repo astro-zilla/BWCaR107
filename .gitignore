@@ -133,3 +133,4 @@ dmypy.json
 img/
 *secrets.h
 *.bat
+serial_monitor.py
