@@ -29,7 +29,7 @@ int port = 53282;
 // wifi setup
 int status = WL_IDLE_STATUS;
 WiFiClient client;
-byte mac[6]; //84:CC:A8:2B:E1:74 -- m4qjzq6z7adbuqfg
+byte mac[6]; //84:CC:A8:2B:E1:74 -- m4qjzq6z7adbuqfgpi
 
 // time for ping calcs
 long time = 0;

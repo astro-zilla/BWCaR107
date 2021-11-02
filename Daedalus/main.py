@@ -22,11 +22,11 @@ import numpy as np
 from numpy import array
 from pynput.keyboard import Key, KeyCode, Listener
 
-# daedalus modules
-from daedalus.peripherals import Buffer
 from daedalus.Image import square, undistort
 from daedalus.aruco import analyse
 from daedalus.navigation import find_block, get_angle
+# daedalus modules
+from daedalus.peripherals import Buffer
 from daedalus.streaming import ArduinoStreamHandler, VideoStreamHandler
 
 # global vars for callback
@@ -92,7 +92,7 @@ DROP = 'dropping'
 RESTART = 'checking for restart'
 
 # thresholds
-MAGNETOMETER_THRESHOLD = 100
+MAGNETOMETER_THRESHOLD = 130
 
 
 def mouse(event: int, x: float, y: float, flags, params):
@@ -125,7 +125,6 @@ def draw_ui(screen_: curses.window, arduino_stream_: ArduinoStreamHandler, ping_
             magnetometer_: Buffer, video_stream_: VideoStreamHandler, cam_: int, fps_: float, status_: str,
             status_color_: int,
             tickrate_: float, ctrl_state_: str, distance_: float, speed_: float) -> None:
-
     screen_.clear()
     # arduino thread info
     screen_.addstr('\nArduino: ', curses.color_pair(WHITE))
@@ -149,6 +148,11 @@ def draw_ui(screen_: curses.window, arduino_stream_: ArduinoStreamHandler, ping_
         screen_.addstr(f'\u251c\u2500\u2500')
         screen_.addstr(f'magnetometer: ', curses.color_pair(WHITE))
         screen_.addstr(f'{magnetometer_.get_mean():.1f}\n', curses.color_pair(BLUE))
+        if 'before' in magnetometer_.means:
+            screen_.addstr(f'\u251c\u2500\u2500')
+            screen_.addstr(f'magnetometer \u0394: ', curses.color_pair(WHITE))
+            screen_.addstr(f'{magnetometer_.get_mean() - magnetometer_.retrieve_mean("before"):.1f}\n',
+                           curses.color_pair(BLUE))
 
         screen_.addstr(f'\u2514\u2500\u2500')
         screen_.addstr(f'commands\n', curses.color_pair(WHITE))
@@ -221,8 +225,8 @@ def main(screen: curses.window = curses.initscr(), robot_aruco_id: int = 7, cam=
         pass
 
     # init asynchronous threading stream handlers
-    #video_stream = VideoStreamHandler(f"http://localhost:808{cam}/stream/video.mjpeg")
-    video_stream = VideoStreamHandler(f"http://idpcam{cam}.eng.cam.ac.uk:8080/stream/video.mjpeg")
+    video_stream = VideoStreamHandler(f"http://localhost:808{cam}/stream/video.mjpeg")
+    # video_stream = VideoStreamHandler(f"http://idpcam{cam}.eng.cam.ac.uk:8080/stream/video.mjpeg")
     arduino_stream = ArduinoStreamHandler(server)
     # begin with write to poll arduino
     arduino_stream.write(data)
@@ -355,14 +359,18 @@ def main(screen: curses.window = curses.initscr(), robot_aruco_id: int = 7, cam=
 
         # debug control state
         if key_i in keys:
+            data["LEDs"] = [0, 0, 0]
             ctrl_state = IDLE
         elif key_w in keys:
             ctrl_state = WAYPOINTS
         elif key_p in keys:
+            data["LEDs"] = [0, 0, 0]
             tstart = time.time()
             ctrl_state = POSITIONING
         elif key_d in keys:
+            data["LEDs"] = [0, 0, 0]
             ctrl_state = DETECT
+            magnetometer.means = {}
             magnetometer.flush()
 
         # manually flush magnetometer buffer
@@ -385,18 +393,22 @@ def main(screen: curses.window = curses.initscr(), robot_aruco_id: int = 7, cam=
         # want to use this section to debug parts of the run-through
         if key_1 in keys:
             waypoints = out.copy()
+            data["LEDs"] = [0, 0, 0]
             next_state = IDLE
             # next_state = POSITIONING
         elif key_2 in keys:
             waypoints = back_red.copy()
+            data["LEDs"] = [0, 1, 0]
             next_state = IDLE
             # next_state = DROP
         elif key_3 in keys:
             waypoints = back_blu.copy()
+            data["LEDs"] = [0, 0, 1]
             next_state = IDLE
             # next_state = DROP
         elif key_4 in keys:
             waypoints = home.copy()
+            data["LEDs"] = [0, 0, 0]
             next_state = IDLE
             # next_state = IDLE
 
@@ -412,7 +424,6 @@ def main(screen: curses.window = curses.initscr(), robot_aruco_id: int = 7, cam=
 
         # control AI
         dist = 0
-        data["LEDs"] = [0, 0, 0]
         # IDLE - do nothing
         if ctrl_state == IDLE:
             motorspeed = [0, 0]
@@ -473,12 +484,11 @@ def main(screen: curses.window = curses.initscr(), robot_aruco_id: int = 7, cam=
             ang0 = get_angle(pos0, head0, block)
 
             # turning to block
-            motorspeed = np.clip([20 * ang, -20 * ang], -130, 130)
+            motorspeed = np.clip([10 * ang, -10 * ang], -100, 100)
             if (abs(ang) < 5 and abs(ang - ang0) / (t - t0) < 5) or (time.time() - tstart) > 20:
-                if np.linalg.norm(block - positions[-1][0]) > 40 and (time.time() - tstart) < 21:  # todo tune distance reqd.
+                if np.linalg.norm(block - positions[-1][0]) > 40 and (time.time() - tstart) < 21:
                     # moving forwards to block
-                    motorspeed[:] *= 110 / 130
-                    motorspeed[:] += 150
+                    motorspeed[:] += 100
                 else:
                     # reached collection point
                     ctrl_state = DETECT
@@ -488,6 +498,7 @@ def main(screen: curses.window = curses.initscr(), robot_aruco_id: int = 7, cam=
         # move forwards and
         elif ctrl_state == DETECT:
             motorspeed = [0, 0]
+
             # check if control data has been collected
             if 'before' in magnetometer.means.keys():
                 # close pincer arms if they are not closed
@@ -499,21 +510,23 @@ def main(screen: curses.window = curses.initscr(), robot_aruco_id: int = 7, cam=
                     # timer for 5s LED pulse
                     LED_timer = time.time()
                 else:
-                    # todo tune threshold
                     # if discrepancy between control and test data > threshold assume metallic block
                     if abs(magnetometer.get_mean() - magnetometer.retrieve_mean('before')) > MAGNETOMETER_THRESHOLD:
                         # metal detected
-                        data["LEDs"][1] = 1
+                        data["LEDs"] = [0, 1, 0]
                         waypoints = back_red.copy()
                     else:
                         # no metal detected
-                        data["LEDs"][2] = 1
+                        data["LEDs"] = [0, 0, 1]
                         waypoints = back_blu.copy()
                     # hold LED high for 5s
                     if time.time() - LED_timer > 5:
                         ctrl_state = WAYPOINTS
                         next_state = DROP
 
+            elif arduinodata["servos"] < 179:
+                data["servos"] = 180
+                magnetometer.flush()
             # collect control data
             elif magnetometer.is_full():
                 magnetometer.save_mean('before')
@@ -620,6 +633,6 @@ if __name__ == "__main__":
         "time": 0,
         "motors": [0, 0],
         "servos": 0,
-        "LEDs": [0, 0, 0, 0]
+        "LEDs": [0, 0, 0]
     }
     curses.wrapper(main)
