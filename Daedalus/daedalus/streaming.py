@@ -1,3 +1,11 @@
+"""Streaming handlers for daedalus datastreams.
+
+daedalus requires a connection to a WiFi-enables Arduino and a video
+source, both of which operate at different rates. This package provides
+asynchronous handlers for these data streams and allows for
+availability polling and blind grabbing of data."""
+
+import datetime
 import json
 import socket
 import time
@@ -67,14 +75,14 @@ class ArduinoStreamHandler(Thread):
                 try:
                     self.client.send(bytes(str(self.out_data), 'utf-8'))
                 except socket.timeout or ConnectionError as e:
-                    log.write(e)
+                    log.write(f'{datetime.time()} {e}')
                 # it's ok for this to block because the arduino can't handle more writes than reads to it
                 try:
                     r = json.loads(self.file.readline())
                     self.in_data = r
                     self.available = True
                 except json.decoder.JSONDecodeError as e:
-                    log.write(str(e))
+                    log.write(f'{datetime.time()} {str(e)}')
 
                 self.times[time.time()] = time.time() - (self.in_data["time"] / 100 + self.t0)
 

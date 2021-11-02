@@ -1,41 +1,30 @@
-import cv2
-import numpy as np
+"""Template for files using PyOpenCV image manipulation."""
 
-from daedalus.Image import square, undistort
-from daedalus.aruco import analyse
-from daedalus.navigation import get_angle
+import cv2
 from daedalus.streaming import VideoStreamHandler
 
 
-def main(robot_aruco_id=2):
+def main():
+    # init stream handler
     video_stream = VideoStreamHandler("http://localhost:8081/stream/video.mjpeg")
+    # start stream handler
     video_stream.start()
 
     while True:
+        # grab frame
         frame = video_stream.frame
-        """
-        frame = undistort(frame, balance=0.5)
-        frame = square(frame)
-        dictionary = {}
-        frame = analyse(frame, dictionary)
-        a = 0
-        if robot_aruco_id in dictionary.keys():
-            position, heading = dictionary[robot_aruco_id]
-            a = just_angle(position, heading, np.int32([mX, mY]))
-            v = [mX, mY] - position
-            h = position + np.int32(50 * v / np.linalg.norm(v))
-            cv2.line(frame, position, h, (255, 0, 0), 2)
-
-        for id in data:
-            print(f'{id}:{data[id]}')
-        """
+        # show frame
         cv2.imshow('frame', frame)
 
+        # wait 20ms for keypress
         k = cv2.waitKey(20)
         if k == ord('q'):
+            # exit if keypress was a 'q'
             break
 
+    # gracefully terminate streamhandler
     video_stream.terminate()
+    # close cv2 window
     cv2.destroyAllWindows()
 
 
