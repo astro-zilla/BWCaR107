@@ -92,7 +92,7 @@ DROP = 'dropping'
 RESTART = 'checking for restart'
 
 # thresholds
-MAGNETOMETER_THRESHOLD = 30
+MAGNETOMETER_THRESHOLD = 100
 
 
 def mouse(event: int, x: float, y: float, flags, params):
@@ -328,7 +328,7 @@ def main(screen: curses.window = curses.initscr(), robot_aruco_id: int = 7, cam=
                 # calc speed in px/s
                 speed = np.linalg.norm(positions[-1][0] - positions[-2][0]) / (positions[-1][2] - positions[-2][2])
 
-                # show that we have detected the marker for this frame
+                # show that we have detected the marker for this fra
                 detect_num = f_num
             else:
                 # 200ms grace period for losing the marker
