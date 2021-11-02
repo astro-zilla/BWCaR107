@@ -221,7 +221,8 @@ def main(screen: curses.window = curses.initscr(), robot_aruco_id: int = 7, cam=
         pass
 
     # init asynchronous threading stream handlers
-    video_stream = VideoStreamHandler(f"http://localhost:808{cam}/stream/video.mjpeg")
+    #video_stream = VideoStreamHandler(f"http://localhost:808{cam}/stream/video.mjpeg")
+    video_stream = VideoStreamHandler(f"http://idpcam{cam}.eng.cam.ac.uk:8080/stream/video.mjpeg")
     arduino_stream = ArduinoStreamHandler(server)
     # begin with write to poll arduino
     arduino_stream.write(data)
