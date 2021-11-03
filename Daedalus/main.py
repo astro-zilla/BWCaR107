@@ -151,8 +151,8 @@ def draw_ui(screen_: curses.window, arduino_stream_: ArduinoStreamHandler, ping_
         if 'before' in magnetometer_.means:
             screen_.addstr(f'\u251c\u2500\u2500')
             screen_.addstr(f'magnetometer \u0394: ', curses.color_pair(WHITE))
-            screen_.addstr(f'{magnetometer_.get_mean() - magnetometer_.retrieve_mean("before"):.1f}\n',
-                           curses.color_pair(BLUE))
+            delta = magnetometer_.get_mean() - magnetometer_.retrieve_mean("before")
+            screen_.addstr(f'{delta:.1f}, {100 * delta / max(magnetometer_.get_mean(), 1):.0f}%\n', curses.color_pair(BLUE))
 
         screen_.addstr(f'\u2514\u2500\u2500')
         screen_.addstr(f'commands\n', curses.color_pair(WHITE))
@@ -459,12 +459,19 @@ def main(screen: curses.window = curses.initscr(), robot_aruco_id: int = 7, cam=
                 # condition for correcting course en route to waypoint
                 elif abs(ang) < 90:
                     e = (50. - speed)
-                    m = 200 + 1.5 * e
+                    m = 200 + 1.5 * eq
 
                     motorspeed = [d * m * np.cos(ang * np.pi / 180) + s, d * m * np.cos(ang * np.pi / 180) - s]
-                # condition for stationary turn to waypoint
+                # condition for stationary turn to waypoints
                 else:
                     motorspeed = [s, -s]
+
+                # kick up ramp
+                if data["LEDs"] == [1,0,0]:
+                    if speed<10:
+                        data["servos"] = 25
+                    else:
+                        data["servos"] = 0
 
             # if not tracking, decay motor speeds (not instant stop)
             else:
@@ -485,8 +492,8 @@ def main(screen: curses.window = curses.initscr(), robot_aruco_id: int = 7, cam=
 
             # turning to block
             motorspeed = np.clip([10 * ang, -10 * ang], -100, 100)
-            if (abs(ang) < 5 and abs(ang - ang0) / (t - t0) < 5) or (time.time() - tstart) > 20:
-                if np.linalg.norm(block - positions[-1][0]) > 40 and (time.time() - tstart) < 21:
+            if (abs(ang) < 5 and abs(ang - ang0) / (t - t0) < 5) or (time.time() - tstart) > 30:
+                if np.linalg.norm(block - positions[-1][0]) > 35 and (time.time() - tstart) < 31:
                     # moving forwards to block
                     motorspeed[:] += 100
                 else:
@@ -495,7 +502,7 @@ def main(screen: curses.window = curses.initscr(), robot_aruco_id: int = 7, cam=
                     # flush magnetometer buffer
                     magnetometer.flush()
 
-        # move forwards and
+        # move forwards andddd
         elif ctrl_state == DETECT:
             motorspeed = [0, 0]
 
@@ -511,7 +518,8 @@ def main(screen: curses.window = curses.initscr(), robot_aruco_id: int = 7, cam=
                     LED_timer = time.time()
                 else:
                     # if discrepancy between control and test data > threshold assume metallic block
-                    if abs(magnetometer.get_mean() - magnetometer.retrieve_mean('before')) > MAGNETOMETER_THRESHOLD:
+                    # if abs(magnetometer.get_mean() - magnetometer.retrieve_mean('before')) > MAGNETOMETER_THRESHOLD:
+                    if abs(magnetometer.get_mean() - magnetometer.retrieve_mean('before')) / magnetometer.get_mean() > 0.065:
                         # metal detected
                         data["LEDs"] = [0, 1, 0]
                         waypoints = back_red.copy()
