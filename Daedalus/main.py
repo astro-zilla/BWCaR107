@@ -11,26 +11,26 @@ robot navigation and computer vision.
 Written by Ellis Collins and Massimo Zambernadi."""
 
 # standard library modules
-import curses
-import datetime
-import socket
-import time
+from curses import wrapper, color_pair, curs_set, init_pair, initscr, start_color, use_default_colors, window
+from socket import AF_INET, SOCK_STREAM, SOL_SOCKET, SO_REUSEADDR, gethostname, socket
+from time import sleep, time
 
 # installed library modules (see /requirements.txt)
-import cv2
-import numpy as np
-from numpy import array
+from cv2 import EVENT_LBUTTONDOWN, EVENT_RBUTTONDOWN, circle, destroyAllWindows, imshow, line, namedWindow, \
+    setMouseCallback, waitKey
+from numpy import array, clip, cos, diff, int32, mean, pi
+from numpy.linalg import norm
 from pynput.keyboard import Key, KeyCode, Listener
 
+# daedalus modules
 from daedalus.Image import square, undistort
 from daedalus.aruco import analyse
 from daedalus.navigation import find_block, get_angle
-# daedalus modules
 from daedalus.peripherals import Buffer
 from daedalus.streaming import ArduinoStreamHandler, VideoStreamHandler
 
 # global vars for callback
-mouse_pos = np.int32([678, 86])
+mouse_pos = int32([678, 86])
 
 # waypoint lists
 out = [array([575, 182]), array([495, 263]), array([261, 498]), array([160, 602])]
@@ -99,11 +99,11 @@ def mouse(event: int, x: float, y: float, flags, params):
     # mouse callback
     global waypoints
     # on rightclick, append to waypoints
-    if event == cv2.EVENT_RBUTTONDOWN:
-        waypoints.append(np.int32([x, y]))
+    if event == EVENT_RBUTTONDOWN:
+        waypoints.append(int32([x, y]))
         # on leftclick, replace waypoints
-    elif event == cv2.EVENT_LBUTTONDOWN:
-        waypoints = [np.int32([x, y])]
+    elif event == EVENT_LBUTTONDOWN:
+        waypoints = [int32([x, y])]
 
 
 # keypress callback: add key to key set
@@ -121,23 +121,23 @@ def on_release(key):
 
 
 # draws UI using curses to show important info at runtime
-def draw_ui(screen_: curses.window, arduino_stream_: ArduinoStreamHandler, ping_: float, arduinodata_: dict,
+def draw_ui(screen_: window, arduino_stream_: ArduinoStreamHandler, ping_: float, arduinodata_: dict,
             magnetometer_: Buffer, video_stream_: VideoStreamHandler, cam_: int, fps_: float, status_: str,
             status_color_: int,
             tickrate_: float, ctrl_state_: str, distance_: float, speed_: float) -> None:
     screen_.clear()
     # arduino thread info
-    screen_.addstr('\nArduino: ', curses.color_pair(WHITE))
-    screen_.addstr(f'{arduino_stream_.status}\n', curses.color_pair(arduino_stream_.status_color))
+    screen_.addstr('\nArduino: ', color_pair(WHITE))
+    screen_.addstr(f'{arduino_stream_.status}\n', color_pair(arduino_stream_.status_color))
 
     if arduino_stream_.status == 'connected':
 
         screen_.addstr(f'\u251c\u2500\u2500')
-        screen_.addstr(f'ping: ', curses.color_pair(WHITE))
-        screen_.addstr(f'{ping_:.1f} ms\n', curses.color_pair(BLUE))
+        screen_.addstr(f'ping: ', color_pair(WHITE))
+        screen_.addstr(f'{ping_:.1f} ms\n', color_pair(BLUE))
 
         screen_.addstr(f'\u251c\u2500\u2500')
-        screen_.addstr(f'data\n', curses.color_pair(WHITE))
+        screen_.addstr(f'data\n', color_pair(WHITE))
 
         for i, (k, v) in enumerate(arduinodata_.items()):
             if i < len(arduinodata_) - 1:
@@ -146,16 +146,16 @@ def draw_ui(screen_: curses.window, arduino_stream_: ArduinoStreamHandler, ping_
                 screen_.addstr(f'\u2502  \u2514\u2500\u2500{k}: {v}\n')
 
         screen_.addstr(f'\u251c\u2500\u2500')
-        screen_.addstr(f'magnetometer: ', curses.color_pair(WHITE))
-        screen_.addstr(f'{magnetometer_.get_mean():.1f}\n', curses.color_pair(BLUE))
+        screen_.addstr(f'magnetometer: ', color_pair(WHITE))
+        screen_.addstr(f'{magnetometer_.get_mean():.1f}\n', color_pair(BLUE))
         if 'before' in magnetometer_.means:
             screen_.addstr(f'\u251c\u2500\u2500')
-            screen_.addstr(f'magnetometer \u0394: ', curses.color_pair(WHITE))
+            screen_.addstr(f'magnetometer \u0394: ', color_pair(WHITE))
             delta = magnetometer_.get_mean() - magnetometer_.retrieve_mean("before")
-            screen_.addstr(f'{delta:.1f}, {100 * delta / max(magnetometer_.get_mean(), 1):.0f}%\n', curses.color_pair(BLUE))
+            screen_.addstr(f'{delta:.1f}, {100 * delta / max(magnetometer_.get_mean(), 1):.0f}%\n', color_pair(BLUE))
 
         screen_.addstr(f'\u2514\u2500\u2500')
-        screen_.addstr(f'commands\n', curses.color_pair(WHITE))
+        screen_.addstr(f'commands\n', color_pair(WHITE))
 
         for i, (k, v) in enumerate(data.items()):
             if i < len(data) - 1:
@@ -164,38 +164,38 @@ def draw_ui(screen_: curses.window, arduino_stream_: ArduinoStreamHandler, ping_
                 screen_.addstr(f'   \u2514\u2500\u2500{k}: {v}\n')
 
     # video thread info
-    screen_.addstr('Camera: ', curses.color_pair(WHITE))
-    screen_.addstr(f'idpcam{cam_} {video_stream_.status}\n', curses.color_pair(video_stream_.status_color))
+    screen_.addstr('Camera: ', color_pair(WHITE))
+    screen_.addstr(f'idpcam{cam_} {video_stream_.status}\n', color_pair(video_stream_.status_color))
 
     if video_stream_.status == 'connected':
         screen_.addstr(f'\u2514\u2500\u2500')
-        screen_.addstr(f'fps: ', curses.color_pair(WHITE))
-        screen_.addstr(f'{fps_:.1f}\n', curses.color_pair(BLUE))
+        screen_.addstr(f'fps: ', color_pair(WHITE))
+        screen_.addstr(f'{fps_:.1f}\n', color_pair(BLUE))
 
     # main thread info
-    screen_.addstr('Daedalus: ', curses.color_pair(WHITE))
-    screen_.addstr(f'{status_}\n', curses.color_pair(status_color_))
+    screen_.addstr('Daedalus: ', color_pair(WHITE))
+    screen_.addstr(f'{status_}\n', color_pair(status_color_))
 
     if status_ != TERMINATED:
         screen_.addstr(f'\u251c\u2500\u2500')
-        screen_.addstr(f'tickrate: ', curses.color_pair(WHITE))
-        screen_.addstr(f'{tickrate_:.1f} Hz\n', curses.color_pair(BLUE))
+        screen_.addstr(f'tickrate: ', color_pair(WHITE))
+        screen_.addstr(f'{tickrate_:.1f} Hz\n', color_pair(BLUE))
 
         screen_.addstr(f'\u251c\u2500\u2500')
-        screen_.addstr(f'control state: ', curses.color_pair(WHITE))
-        screen_.addstr(f'{ctrl_state_}\n', curses.color_pair(MAGENTA))
+        screen_.addstr(f'control state: ', color_pair(WHITE))
+        screen_.addstr(f'{ctrl_state_}\n', color_pair(MAGENTA))
 
         if status_ == TRACKING:
             screen_.addstr(f'\u251c\u2500\u2500')
-            screen_.addstr(f'distance: ', curses.color_pair(WHITE))
-            screen_.addstr(f'{distance_:.1f} px\n', curses.color_pair(BLUE))
+            screen_.addstr(f'distance: ', color_pair(WHITE))
+            screen_.addstr(f'{distance_:.1f} px\n', color_pair(BLUE))
 
             screen_.addstr(f'\u251c\u2500\u2500')
-            screen_.addstr(f'speed: ', curses.color_pair(WHITE))
-            screen_.addstr(f'{speed_:.1f} px/s\n', curses.color_pair(BLUE))
+            screen_.addstr(f'speed: ', color_pair(WHITE))
+            screen_.addstr(f'{speed_:.1f} px/s\n', color_pair(BLUE))
 
         screen_.addstr(f'\u2514\u2500\u2500')
-        screen_.addstr(f'waypoints\n', curses.color_pair(WHITE))
+        screen_.addstr(f'waypoints\n', color_pair(WHITE))
 
         for i, (x, y) in enumerate(waypoints):
             if i < len(waypoints) - 1:
@@ -206,23 +206,18 @@ def draw_ui(screen_: curses.window, arduino_stream_: ArduinoStreamHandler, ping_
     screen_.refresh()
 
 
-def main(screen: curses.window = curses.initscr(), robot_aruco_id: int = 7, cam=1):
+def main(screen: window = initscr(), robot_aruco_id: int = 7, cam=1):
     # waypoints needs to be accessible from mouse callbacks
     global waypoints
     # broadcast locally on 53282
-    host = socket.gethostname()
+    host = gethostname()
     port = 53282
 
     # listen on streaming socket
-    server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    server.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+    server = socket(AF_INET, SOCK_STREAM)
+    server.setsockopt(SOL_SOCKET, SO_REUSEADDR, 1)
     server.bind((host, port))
     server.listen()
-
-    # clears logfile of previous entries
-    with open('daedalus/daedalus.log', 'w+') as f:
-        f.write(f'{datetime.time()}: START')
-        pass
 
     # init asynchronous threading stream handlers
     video_stream = VideoStreamHandler(f"http://localhost:808{cam}/stream/video.mjpeg")
@@ -236,11 +231,11 @@ def main(screen: curses.window = curses.initscr(), robot_aruco_id: int = 7, cam=
     arduino_stream.start()
 
     # curses terminal: invisible cursor, init colours
-    curses.curs_set(False)
-    curses.start_color()
-    curses.use_default_colors()
+    curs_set(False)
+    start_color()
+    use_default_colors()
     for i in range(0, 255):
-        curses.init_pair(i + 1, i, -1)
+        init_pair(i + 1, i, -1)
 
     # clear terminal
     screen.clear()
@@ -253,8 +248,8 @@ def main(screen: curses.window = curses.initscr(), robot_aruco_id: int = 7, cam=
     times = [0.] * 10
 
     # mouse callback in main window
-    cv2.namedWindow('frame')
-    cv2.setMouseCallback('frame', mouse)
+    namedWindow('frame')
+    setMouseCallback('frame', mouse)
 
     # control params
     motorspeed = [0.0, 0.0]
@@ -278,7 +273,7 @@ def main(screen: curses.window = curses.initscr(), robot_aruco_id: int = 7, cam=
     # init positional data
     positions = [([0, 0], [0, 0], 0.), ([0, 0], [0, 0], 1.)]
     speed = 0
-    block = np.array([0, 0])
+    block = array([0, 0])
     blocks_collected = 0
 
     # init timer vars
@@ -287,9 +282,9 @@ def main(screen: curses.window = curses.initscr(), robot_aruco_id: int = 7, cam=
 
     while True:
         # calculate main loop tickrate
-        times.append(time.time())
+        times.append(time())
         times = times[-10:]
-        tickrate = 1 / np.mean(np.diff(times))
+        tickrate = 1 / mean(diff(times))
 
         # get/send arduino data from
         arduino_stream.write(data)
@@ -310,7 +305,7 @@ def main(screen: curses.window = curses.initscr(), robot_aruco_id: int = 7, cam=
                 block = b
 
             # set variable representing unique frame id
-            f_num = time.time()
+            f_num = time()
 
         # check if we have detected the marker this frame
         if detect_num != f_num and frame is not None:
@@ -326,18 +321,18 @@ def main(screen: curses.window = curses.initscr(), robot_aruco_id: int = 7, cam=
 
                 # get state vectors of marker
                 position, heading = dictionary[robot_aruco_id]
-                positions.append((position, heading, time.time()))
+                positions.append((position, heading, time()))
 
                 # clip position list to 50
                 positions = positions[-50:]
                 # calc speed in px/s
-                speed = np.linalg.norm(positions[-1][0] - positions[-2][0]) / (positions[-1][2] - positions[-2][2])
+                speed = norm(positions[-1][0] - positions[-2][0]) / (positions[-1][2] - positions[-2][2])
 
                 # show that we have detected the marker for this fra
                 detect_num = f_num
             else:
                 # 200ms grace period for losing the marker
-                if time.time() - detect_num > 0.2:
+                if time() - detect_num > 0.2:
                     status = MARKER_NOT_FOUND
                     status_color = YELLOW
                 else:
@@ -365,7 +360,7 @@ def main(screen: curses.window = curses.initscr(), robot_aruco_id: int = 7, cam=
             ctrl_state = WAYPOINTS
         elif key_p in keys:
             data["LEDs"] = [0, 0, 0]
-            tstart = time.time()
+            tstart = time()
             ctrl_state = POSITIONING
         elif key_d in keys:
             data["LEDs"] = [0, 0, 0]
@@ -383,7 +378,7 @@ def main(screen: curses.window = curses.initscr(), robot_aruco_id: int = 7, cam=
         # start run
         elif key_s in keys:
             blocks_collected = 0
-            time_start = time.time()
+            time_start = time()
             ctrl_state = RESTART
         # restart run (keep collected blocks and start time same)
         elif key_r in keys:
@@ -438,14 +433,14 @@ def main(screen: curses.window = curses.initscr(), robot_aruco_id: int = 7, cam=
 
                 # get and draw error angle, distance
                 ang = get_angle(pos, head, target)
-                dist = np.linalg.norm(target - pos)
-                cv2.line(frame, pos, target, (255, 0, 0), 1)
-                cv2.circle(frame, target, 3, (0, 0, 255))
+                dist = norm(target - pos)
+                line(frame, pos, target, (255, 0, 0), 1)
+                circle(frame, target, 3, (0, 0, 255))
 
                 # calculate absolute speed in px/s
-                s = np.clip(5 * ang, -200, 200)
+                s = clip(5 * ang, -200, 200)
                 # tuning parameter to slow down when approaching a point (left off for IDP M1 2021)
-                d = 1  # np.clip(dist / 20, 0.5, 1)
+                d = 1  # clip(dist / 20, 0.5, 1)
 
                 # condition for reaching a waypoint
                 if dist < 30:
@@ -454,14 +449,14 @@ def main(screen: curses.window = curses.initscr(), robot_aruco_id: int = 7, cam=
                         positions = positions[-2:]
                     else:
                         motorspeed = [0.0, 0.0]
-                        tstart = time.time()
+                        tstart = time()
                         ctrl_state = next_state
                 # condition for correcting course en route to waypoint
                 elif abs(ang) < 90:
                     e = (50. - speed)
                     m = 200 + 1.5 * e
 
-                    motorspeed = [d * m * np.cos(ang * np.pi / 180) + s, d * m * np.cos(ang * np.pi / 180) - s]
+                    motorspeed = [d * m * cos(ang * pi / 180) + s, d * m * cos(ang * pi / 180) - s]
                 # condition for stationary turn to waypoints
                 else:
                     motorspeed = [s, -s]
@@ -491,9 +486,9 @@ def main(screen: curses.window = curses.initscr(), robot_aruco_id: int = 7, cam=
             ang0 = get_angle(pos0, head0, block)
 
             # turning to block
-            motorspeed = np.clip([10 * ang, -10 * ang], -100, 100)
-            if (abs(ang) < 5 and abs(ang - ang0) / (t - t0) < 5) or (time.time() - tstart) > 45:
-                if np.linalg.norm(block - positions[-1][0]) > 35 and (time.time() - tstart) < 46:
+            motorspeed = clip([10 * ang, -10 * ang], -100, 100)
+            if (abs(ang) < 5 and abs(ang - ang0) / (t - t0) < 5) or (time() - tstart) > 45:
+                if norm(block - positions[-1][0]) > 35 and (time() - tstart) < 46:
                     # moving forwards to block
                     motorspeed[:] += 100
                 else:
@@ -515,7 +510,7 @@ def main(screen: curses.window = curses.initscr(), robot_aruco_id: int = 7, cam=
                 # if pincer arms are closed and the buffer has been filled, check for metal and continue
                 elif not magnetometer.is_full():
                     # timer for 5s LED pulse
-                    LED_timer = time.time()
+                    LED_timer = time()
                 else:
                     # if discrepancy between control and test data > threshold assume metallic block
                     # if abs(magnetometer.get_mean() - magnetometer.retrieve_mean('before')) > MAGNETOMETER_THRESHOLD:
@@ -528,7 +523,7 @@ def main(screen: curses.window = curses.initscr(), robot_aruco_id: int = 7, cam=
                         data["LEDs"] = [0, 0, 1]
                         waypoints = back_blu.copy()
                     # hold LED high for 5s
-                    #if time.time() - LED_timer > 5:
+                    #if time() - LED_timer > 5:
                     ctrl_state = WAYPOINTS
                     next_state = DROP
 
@@ -547,7 +542,7 @@ def main(screen: curses.window = curses.initscr(), robot_aruco_id: int = 7, cam=
             if arduinodata["servos"] < 120:
                 data["servos"] = 180
             # retreat back
-            elif np.linalg.norm(waypoints[0] - positions[-1][0]) < 100:
+            elif norm(waypoints[0] - positions[-1][0]) < 100:
                 motorspeed = [-150, -150]
             # complete: restart cycle
             else:
@@ -561,7 +556,7 @@ def main(screen: curses.window = curses.initscr(), robot_aruco_id: int = 7, cam=
             data["LEDs"] = [0, 0, 0]
 
             # enough time: go again
-            if 300 - (time.time() - time_start) > 90:  # (allowed time) - (runtime) > (lap time) req. for a full run
+            if 300 - (time() - time_start) > 90:  # (allowed time) - (runtime) > (lap time) req. for a full run
                 waypoints = out.copy()
                 ctrl_state = WAYPOINTS
                 next_state = POSITIONING
@@ -574,14 +569,14 @@ def main(screen: curses.window = curses.initscr(), robot_aruco_id: int = 7, cam=
 
         # draw waypoints
         for i in range(len(waypoints) - 1):
-            cv2.line(frame, waypoints[i], waypoints[i + 1], (255, 100, 100), 1)
-            cv2.circle(frame, waypoints[i + 1], 3, (100, 100, 255))
+            line(frame, waypoints[i], waypoints[i + 1], (255, 100, 100), 1)
+            circle(frame, waypoints[i + 1], 3, (100, 100, 255))
 
         # draw block
-        cv2.circle(frame, block, 3, (50, 255, 100), -1)
+        circle(frame, block, 3, (50, 255, 100), -1)
 
         # write motor data
-        data["motors"] = list(np.clip(motorspeed, -255, 255))
+        data["motors"] = list(clip(motorspeed, -255, 255))
 
         # flashing LED (0) to display when moving
         if data["motors"] != [0, 0]:
@@ -607,12 +602,12 @@ def main(screen: curses.window = curses.initscr(), robot_aruco_id: int = 7, cam=
                 speed_=speed)
 
         # output image to frame
-        cv2.imshow('frame', frame)
-        cv2.waitKey(1)
+        imshow('frame', frame)
+        waitKey(1)
 
     # graceful exit
-    time.sleep(0.2)
-    cv2.destroyAllWindows()
+    sleep(0.2)
+    destroyAllWindows()
     video_stream.terminate()
     arduino_stream.terminate()
     status = TERMINATED
@@ -643,4 +638,4 @@ if __name__ == "__main__":
         "servos": 0,
         "LEDs": [0, 0, 0]
     }
-    curses.wrapper(main)
+    wrapper(main)

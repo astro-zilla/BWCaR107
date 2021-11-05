@@ -4,14 +4,14 @@ square_picker.py can be used to generate some extra calibration
 parameters for squaring an image. It does not undistors from a camera
 matrix, it merely performs an affine transform of an undistorted image
 to show a specified quadrilateral mapped to a square."""
+from cv2 import BORDER_CONSTANT, EVENT_LBUTTONDOWN, EVENT_MBUTTONDOWN, EVENT_MOUSEWHEEL, EVENT_RBUTTONDOWN, circle, \
+    copyMakeBorder, destroyAllWindows, imshow, line, namedWindow, setMouseCallback, waitKey
+from numpy import float32, int32
 
-import cv2
-import numpy as np
+from .Image import square, undistort
+from .streaming import VideoStreamHandler
 
-from daedalus.Image import square, undistort
-from daedalus.streaming import VideoStreamHandler
-
-points = np.int32([[156, 707], [224, 63], [861, 102], [830, 765]])
+points = int32([[156, 707], [224, 63], [861, 102], [830, 765]])
 
 
 def draw_circle(event, x, y, flags, param):
@@ -23,13 +23,13 @@ def draw_circle(event, x, y, flags, param):
         mousewheel for pt3
     """
 
-    if event == cv2.EVENT_LBUTTONDOWN:
+    if event == EVENT_LBUTTONDOWN:
         points[0] = (x, y)
-    elif event == cv2.EVENT_MBUTTONDOWN:
+    elif event == EVENT_MBUTTONDOWN:
         points[1] = (x, y)
-    elif event == cv2.EVENT_RBUTTONDOWN:
+    elif event == EVENT_RBUTTONDOWN:
         points[2] = (x, y)
-    elif event == cv2.EVENT_MOUSEWHEEL:
+    elif event == EVENT_MOUSEWHEEL:
         points[3] = (x, y)
 
 
@@ -39,29 +39,29 @@ def main():
     video_stream.start()
 
     # setup mouse callback event
-    cv2.namedWindow('frame_ext')
-    cv2.setMouseCallback('frame_ext', draw_circle)
+    namedWindow('frame_ext')
+    setMouseCallback('frame_ext', draw_circle)
 
     while True:
         # grab and undistort frame
         frame = video_stream.frame
         undistorted = undistort(frame, balance=0.5)
-        frame_ext = cv2.copyMakeBorder(undistorted, 0, 100, 0, 0, cv2.BORDER_CONSTANT, value=(0, 0, 0))
-        frame_sq = square(undistorted, np.float32(points))
+        frame_ext = copyMakeBorder(undistorted, 0, 100, 0, 0, BORDER_CONSTANT, value=(0, 0, 0))
+        frame_sq = square(undistorted, float32(points))
 
         # draw circles on vertices
         for point in list(points):
-            cv2.circle(frame_ext, point, 3, (255, 255, 255), -1)
+            circle(frame_ext, point, 3, (255, 255, 255), -1)
 
         # connect vertices with lines
         for i in range(len(points) - 1):
-            cv2.line(frame_ext, points[i][:], points[i + 1][:], (255, 255, 255), 1)
+            line(frame_ext, points[i][:], points[i + 1][:], (255, 255, 255), 1)
 
         # show modified and unmodified frames
-        cv2.imshow('frame_ext', frame_ext)
-        cv2.imshow('frame', frame_sq)
+        imshow('frame_ext', frame_ext)
+        imshow('frame', frame_sq)
 
-        k = cv2.waitKey(20)
+        k = waitKey(20)
         if k == ord('q'):
             # exit when q is pressed
             break
@@ -72,7 +72,7 @@ def main():
 
     # graceful exit
     video_stream.terminate()
-    cv2.destroyAllWindows()
+    destroyAllWindows()
 
 
 if __name__ == "__main__":

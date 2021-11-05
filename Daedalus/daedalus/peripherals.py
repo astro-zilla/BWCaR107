@@ -1,4 +1,4 @@
-import time
+from time import time
 
 
 class Buffer:
@@ -42,5 +42,5 @@ class Buffer:
 
 
 def flash(freq):
-    t = (time.time() * freq) % 1
+    t = (time() * freq) % 1
     return round(t)

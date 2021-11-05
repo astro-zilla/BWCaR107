@@ -131,6 +131,5 @@ dmypy.json
 # PyCharm
 .idea/
 img/
-*secrets.h
+z-secrets.h
 *.bat
-serial_monitor.py

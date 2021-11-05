@@ -1,7 +1,7 @@
 """Template for files using PyOpenCV image manipulation."""
+from cv2 import destroyAllWindows, imshow, waitKey
 
-import cv2
-from daedalus.streaming import VideoStreamHandler
+from .streaming import VideoStreamHandler
 
 
 def main():
@@ -14,10 +14,10 @@ def main():
         # grab frame
         frame = video_stream.frame
         # show frame
-        cv2.imshow('frame', frame)
+        imshow('frame', frame)
 
         # wait 20ms for keypress
-        k = cv2.waitKey(20)
+        k = waitKey(20)
         if k == ord('q'):
             # exit if keypress was a 'q'
             break
@@ -25,7 +25,7 @@ def main():
     # gracefully terminate streamhandler
     video_stream.terminate()
     # close cv2 window
-    cv2.destroyAllWindows()
+    destroyAllWindows()
 
 
 if __name__ == "__main__":
