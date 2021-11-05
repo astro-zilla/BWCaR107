@@ -459,7 +459,7 @@ def main(screen: curses.window = curses.initscr(), robot_aruco_id: int = 7, cam=
                 # condition for correcting course en route to waypoint
                 elif abs(ang) < 90:
                     e = (50. - speed)
-                    m = 200 + 1.5 * eq
+                    m = 200 + 1.5 * e
 
                     motorspeed = [d * m * np.cos(ang * np.pi / 180) + s, d * m * np.cos(ang * np.pi / 180) - s]
                 # condition for stationary turn to waypoints
@@ -492,8 +492,8 @@ def main(screen: curses.window = curses.initscr(), robot_aruco_id: int = 7, cam=
 
             # turning to block
             motorspeed = np.clip([10 * ang, -10 * ang], -100, 100)
-            if (abs(ang) < 5 and abs(ang - ang0) / (t - t0) < 5) or (time.time() - tstart) > 30:
-                if np.linalg.norm(block - positions[-1][0]) > 35 and (time.time() - tstart) < 31:
+            if (abs(ang) < 5 and abs(ang - ang0) / (t - t0) < 5) or (time.time() - tstart) > 45:
+                if np.linalg.norm(block - positions[-1][0]) > 35 and (time.time() - tstart) < 46:
                     # moving forwards to block
                     motorspeed[:] += 100
                 else:
@@ -528,9 +528,9 @@ def main(screen: curses.window = curses.initscr(), robot_aruco_id: int = 7, cam=
                         data["LEDs"] = [0, 0, 1]
                         waypoints = back_blu.copy()
                     # hold LED high for 5s
-                    if time.time() - LED_timer > 5:
-                        ctrl_state = WAYPOINTS
-                        next_state = DROP
+                    #if time.time() - LED_timer > 5:
+                    ctrl_state = WAYPOINTS
+                    next_state = DROP
 
             elif arduinodata["servos"] < 179:
                 data["servos"] = 180

@@ -1,7 +1,7 @@
 # BWCaR107
 IDP project for team 107
-## Overview of files:
-- Daedalus\main.py is main server program to run on PC
-- Daedalus\StreamHandlers.py runs asynchronous streams of Arduino data and camera data
-- Theseus\theseus.ino runs on the Arduino and is the main controller program, takes input from Daedalus over WiFi
-- Theseus\z_secrets.h is a dummy(ish) header file that **MUST** be alphabetically after theseus.ino (for reasons beyond my understanding)
+## Project Structure
+- Daedalus is software to run on a PC, which reads camera data and sends commands to the Arduino.
+  - `daedalus.streaming` includes 2 classes, `ArduinoStream` and `VideoStream`, both of which inherit `threading.Thread` and are run in their own logical threads.
+  - `daedalus.aruco` contains a selection of wrapped functions from `cv2.aruco` which are used to identify the ArUco marker on top of the robot.
+  - `daedalus.navigation` contains functions for 
