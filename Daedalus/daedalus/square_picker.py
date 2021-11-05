@@ -8,7 +8,7 @@ from cv2 import BORDER_CONSTANT, EVENT_LBUTTONDOWN, EVENT_MBUTTONDOWN, EVENT_MOU
     copyMakeBorder, destroyAllWindows, imshow, line, namedWindow, setMouseCallback, waitKey
 from numpy import float32, int32
 
-from .Image import square, undistort
+from .image import square, undistort
 from .streaming import VideoStreamHandler
 
 points = int32([[156, 707], [224, 63], [861, 102], [830, 765]])

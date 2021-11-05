@@ -23,7 +23,7 @@ from numpy.linalg import norm
 from pynput.keyboard import Key, KeyCode, Listener
 
 # daedalus modules
-from daedalus.Image import square, undistort
+from daedalus.image import square, undistort
 from daedalus.aruco import analyse
 from daedalus.navigation import find_block, get_angle
 from daedalus.peripherals import Buffer
