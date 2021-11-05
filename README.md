@@ -11,9 +11,10 @@ IDP software for team 107
   - `daedalus.streaming` includes 2 classes, `ArduinoStream` and `VideoStream`, both of which inherit `threading.Thread` and are run in their own logical threads.
 - Theseus is software to run on an Arduino, which translated commands from Daedalus into realisable actions of motors, servos and LEDs. It also relays sensor and state information back to Daedalus for analysis.
 ## To Use:
+- `Daedalus\main.py` will run without the required connections but with no functionality.
 - `Theseus\wifi-secrets.h` requires token information which you can generate on the UCS tokens page.
 - `Theseus\theseus.ino` requires you to enter the local IP of the computer you are running Daedalus on as `IPAddress server`, which must be connected to eduroam.
-- `Daedalus\main.py` must run in a terminal or terminal emulator, not a python console
+- `Daedalus\main.py` must run in a terminal or terminal emulator, not a python console.
 - You must ssh tunnel into `gate.eng.cam.ac.uk` to get access to the cameras:
   - ~ ssh -L 8081:idpcam1.eng.cam.ac.uk:8080 USER@gate.eng.cam.ac.uk
   - ~ ssh -L 8082:idpcam2.eng.cam.ac.uk:8080 USER@gate.eng.cam.ac.uk
