@@ -4,7 +4,7 @@ IDP software for team 107
 - Daedalus is software to run on a PC, which reads camera data and sends commands to the Arduino.
   - `daedalus.aruco` contains a selection of wrapped functions from `cv2.aruco` which are used to identify the ArUco marker on top of the robot.
   - `daedalus.cam_skeleton` is a skeleton file for programs using the cv2 camera library
-  - `daedalus.Image` contains functions for image transformations and undistortion 
+  - `daedalus.image` contains functions for image transformations and undistortion 
   - `daedalus.navigation` contains functions for finding objects n the frame.
   - `daedalus.peripherals` contains a functions used to read and wrte from Arduino peripherals
   - `daedalus.square_picker` is a utility file used to select a quadrilateral used to form an affine transform, squaring an image on the quadrilateral.
@@ -16,5 +16,5 @@ IDP software for team 107
 - `Theseus\theseus.ino` requires you to enter the local IP of the computer you are running Daedalus on as `IPAddress server`, which must be connected to eduroam.
 - `Daedalus\main.py` must run in a terminal or terminal emulator, not a python console.
 - You must ssh tunnel into `gate.eng.cam.ac.uk` to get access to the cameras:
-  - ~ ssh -L 8081:idpcam1.eng.cam.ac.uk:8080 USER@gate.eng.cam.ac.uk
-  - ~ ssh -L 8082:idpcam2.eng.cam.ac.uk:8080 USER@gate.eng.cam.ac.uk
+  - `~ ssh -L 8081:idpcam1.eng.cam.ac.uk:8080 USER@gate.eng.cam.ac.uk`
+  - `~ ssh -L 8082:idpcam2.eng.cam.ac.uk:8080 USER@gate.eng.cam.ac.uk`
