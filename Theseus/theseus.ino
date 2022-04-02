@@ -159,9 +159,6 @@ void setup() {
     Serial.println("Connected to WiFi");
     printWifiStatus(); // ###REMOVE BEFORE FIRE###
 
-    //int err = WiFi.hostByName('dell-g5.eduroam.jc',server);
-    //if ( err == 1 ){ err = WiFi.hostByName('dell-g5.wireless.private.cam.ac.uk',server); }
-    //if ( err == 1 ){ Serial.println("Error resolving name"); }
     Serial.print("Attempting to connect to IP: ");
     Serial.println(server);
     if (client.connect(server,port)) {
